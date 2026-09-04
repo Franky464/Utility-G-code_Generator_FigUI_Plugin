@@ -18,7 +18,7 @@ body {
 }
 .layout { display: flex; flex: 1; overflow: hidden; }
 .sidebar {
-  width: 320px; min-width: 300px;
+  width: 300px; min-width: 280px;
   background: var(--surface, #151c28);
   border-right: 1px solid var(--border, #222840);
   overflow-y: auto;
@@ -60,7 +60,33 @@ select { cursor: pointer; }
   font-size: 14px; font-weight: 700; cursor: pointer;
 }
 .generate-btn:hover { filter: brightness(1.1); }
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.main-split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.panel-left { border-right: 1px solid var(--border, #222840); }
+.panel-header {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted, #6a7898);
+  background: var(--surface, #151c28);
+  border-bottom: 1px solid var(--border, #222840);
+}
 #gcode-output {
   flex: 1; width: 100%;
   background: var(--elevated, #1a2235);
@@ -68,8 +94,34 @@ select { cursor: pointer; }
   color: var(--text-primary, #e2e6f4);
   font-family: ui-monospace, monospace;
   font-size: 11px; line-height: 1.45;
-  padding: 12px;
+  padding: 10px;
 }
+.viz-wrap {
+  flex: 1;
+  position: relative;
+  background: #0a0e16;
+  min-height: 0;
+}
+#preview-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.viz-legend {
+  position: absolute;
+  left: 8px; bottom: 8px;
+  font-size: 11px;
+  color: var(--text-muted, #6a7898);
+  background: rgba(12,16,24,.85);
+  border: 1px solid var(--border, #222840);
+  border-radius: 4px;
+  padding: 6px 8px;
+  pointer-events: none;
+}
+.viz-legend span { display: inline-block; width: 18px; height: 2px; vertical-align: middle; margin-right: 6px; }
+.leg-rapid { border-top: 2px dashed #64748b; height: 0; }
+.leg-cut { background: #f0a030; }
+.leg-start { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
 .action-bar {
   padding: 8px 12px;
   background: var(--surface, #151c28);
@@ -89,12 +141,15 @@ select { cursor: pointer; }
 #status.ok { color: #22c55e; }
 #status.err { color: #ef4444; }
 .hidden { display: none !important; }
+@media (max-width: 900px) {
+  .main-split { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  .panel-left { border-right: none; border-bottom: 1px solid var(--border, #222840); }
+}
 </style>
 </head>
 <body>
 <div class="layout">
   <div class="sidebar">
-
     <div class="section">
       <div class="section-title">Mode d'opération</div>
       <select id="operation" class="mode-select">
@@ -106,7 +161,6 @@ select { cursor: pointer; }
         <option value="6">6 – Filetage</option>
       </select>
     </div>
-
     <div class="section">
       <div class="section-title">Projet (commun)</div>
       <label>Nom projet</label>
@@ -127,7 +181,6 @@ select { cursor: pointer; }
         </div>
       </div>
     </div>
-
     <div class="section">
       <div class="section-title">Position départ (par mode)</div>
       <div class="row2">
@@ -139,7 +192,6 @@ select { cursor: pointer; }
         <div><label>Dégagement Z</label><input type="number" id="clearance_height" value="5" min="0.1" step="0.1"></div>
       </div>
     </div>
-
     <div class="section">
       <div class="section-title">Outil & vitesses (par mode)</div>
       <div class="row2">
@@ -153,7 +205,6 @@ select { cursor: pointer; }
       <label>Profondeur totale (mm)</label>
       <input type="number" id="total_depth" value="2" min="0.01" step="0.1">
     </div>
-
     <div class="section mode-panel" id="panel-1">
       <div class="section-title">Surfaçage</div>
       <div class="row2">
@@ -169,7 +220,6 @@ select { cursor: pointer; }
         <option value="alternate">Alterné</option>
       </select>
     </div>
-
     <div class="section mode-panel hidden" id="panel-2">
       <div class="section-title">Perçage détourage</div>
       <label>Ø trou (mm)</label>
@@ -188,7 +238,6 @@ select { cursor: pointer; }
       <label>Chevauchement % (borgne)</label>
       <input type="number" id="overlap_blind" value="50" min="0" max="99" step="1">
     </div>
-
     <div class="section mode-panel hidden" id="panel-3">
       <div class="section-title">Matrice RAST</div>
       <div class="row2">
@@ -202,7 +251,6 @@ select { cursor: pointer; }
       <label>Hauteur débourrage</label>
       <input type="number" id="deburr_height" value="2" min="0.1" step="0.1">
     </div>
-
     <div class="section mode-panel hidden" id="panel-4">
       <div class="section-title">Rayon 90°</div>
       <label>Rayon (mm)</label>
@@ -220,7 +268,6 @@ select { cursor: pointer; }
         <option value="climb">Avalant</option>
       </select>
     </div>
-
     <div class="section mode-panel hidden" id="panel-5">
       <div class="section-title">Trou oblong</div>
       <div class="row2">
@@ -235,7 +282,6 @@ select { cursor: pointer; }
         <option value="climb">Avalant</option>
       </select>
     </div>
-
     <div class="section mode-panel hidden" id="panel-6">
       <div class="section-title">Filetage</div>
       <label>Ø trou / pièce (mm)</label>
@@ -255,12 +301,27 @@ select { cursor: pointer; }
         <div><label>Nb filets</label><input type="number" id="thread_number" value="6" min="1" step="1"></div>
       </div>
     </div>
-
     <button class="generate-btn" onclick="generate()">Générer G-code</button>
   </div>
 
   <div class="main">
-    <textarea id="gcode-output" readonly spellcheck="false" placeholder="Le G-code apparaîtra ici..."></textarea>
+    <div class="main-split">
+      <div class="panel panel-left">
+        <div class="panel-header">G-code</div>
+        <textarea id="gcode-output" readonly spellcheck="false" placeholder="Le G-code apparaîtra ici..."></textarea>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Aperçu 2D (XY)</div>
+        <div class="viz-wrap">
+          <canvas id="preview-canvas"></canvas>
+          <div class="viz-legend">
+            <div><span class="leg-start"></span> Départ</div>
+            <div><span class="leg-rapid"></span> Rapide G0</div>
+            <div><span class="leg-cut"></span> Usinage G1/G2/G3</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="action-bar">
       <button class="action-btn" id="open-btn" onclick="openInViewer()" disabled>Open in Viewer</button>
       <span id="status"></span>
@@ -307,104 +368,301 @@ function str(id) {
   return el ? (el.value || '').trim() : '';
 }
 function fmt(v) { return Number(v).toFixed(3); }
-
 function showModePanel(op) {
   document.querySelectorAll('.mode-panel').forEach(el => el.classList.add('hidden'));
   const panel = document.getElementById('panel-' + op);
   if (panel) panel.classList.remove('hidden');
 }
 
-/* ========== Settings PAR MODE ========== */
-/* Communs : project_name, machine, global_units, plunge_percent */
-/* Tout le reste est dans la section du mode */
+/* ========== Preview 2D ========== */
+function parseWord(line, letter) {
+  const re = new RegExp(letter + '([-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)', 'i');
+  const m = line.match(re);
+  return m ? parseFloat(m[1]) : null;
+}
 
+function parseGCodePaths(gcode) {
+  const segs = [];
+  let x = 0, y = 0, z = 0;
+  let abs = true;
+  let startSet = false;
+  let startX = 0, startY = 0;
+  const lines = String(gcode || '').split(/\r?\n/);
+
+  function toAbs(nx, ny, nz) {
+    return {
+      x: nx == null ? x : (abs ? nx : x + nx),
+      y: ny == null ? y : (abs ? ny : y + ny),
+      z: nz == null ? z : (abs ? nz : z + nz)
+    };
+  }
+
+  function addLine(x0, y0, x1, y1, rapid) {
+    if (x0 === x1 && y0 === y1) return;
+    segs.push({ type: rapid ? 'rapid' : 'cut', x0, y0, x1, y1 });
+  }
+
+  function addArc(x0, y0, x1, y1, i, j, cw) {
+    const cx = x0 + (i || 0);
+    const cy = y0 + (j || 0);
+    let a0 = Math.atan2(y0 - cy, x0 - cx);
+    let a1 = Math.atan2(y1 - cy, x1 - cx);
+    let da = a1 - a0;
+    if (cw) {
+      if (da > 0) da -= 2 * Math.PI;
+      if (Math.abs(da) < 1e-9) da = -2 * Math.PI;
+    } else {
+      if (da < 0) da += 2 * Math.PI;
+      if (Math.abs(da) < 1e-9) da = 2 * Math.PI;
+    }
+    const r = Math.hypot(x0 - cx, y0 - cy) || Math.hypot(x1 - cx, y1 - cy);
+    const n = Math.max(8, Math.min(72, Math.ceil(Math.abs(da) / (Math.PI / 24))));
+    let px = x0, py = y0;
+    for (let k = 1; k <= n; k++) {
+      const a = a0 + da * (k / n);
+      const qx = cx + r * Math.cos(a);
+      const qy = cy + r * Math.sin(a);
+      segs.push({ type: 'cut', x0: px, y0: py, x1: qx, y1: qy });
+      px = qx; py = qy;
+    }
+  }
+
+  for (let raw of lines) {
+    let line = raw.replace(/;.*$/, '').replace(/\(.*?\)/g, '').trim();
+    if (!line) continue;
+    if (/^G90\b/i.test(line)) { abs = true; continue; }
+    if (/^G91\b/i.test(line)) { abs = false; continue; }
+
+    const gMatch = line.match(/\bG0*(\d+)\b/i);
+    const g = gMatch ? parseInt(gMatch[1], 10) : null;
+    if (g == null && !/[XYZIJK]/i.test(line)) continue;
+
+    const nx = parseWord(line, 'X');
+    const ny = parseWord(line, 'Y');
+    const nz = parseWord(line, 'Z');
+    const ni = parseWord(line, 'I');
+    const nj = parseWord(line, 'J');
+    const p = toAbs(nx, ny, nz);
+
+    if (!startSet && (nx != null || ny != null)) {
+      startX = p.x; startY = p.y; startSet = true;
+    }
+
+    if (g === 0 || g === 00) {
+      addLine(x, y, p.x, p.y, true);
+      x = p.x; y = p.y; z = p.z;
+    } else if (g === 1) {
+      addLine(x, y, p.x, p.y, false);
+      x = p.x; y = p.y; z = p.z;
+    } else if (g === 2 || g === 3) {
+      addArc(x, y, p.x, p.y, ni || 0, nj || 0, g === 2);
+      x = p.x; y = p.y; z = p.z;
+    } else if (nx != null || ny != null || nz != null) {
+      // continuation without explicit G → treat as last motion type is hard; skip pure Z
+      if (nx != null || ny != null) {
+        addLine(x, y, p.x, p.y, false);
+        x = p.x; y = p.y;
+      }
+      z = p.z;
+    }
+  }
+  return { segs, startX, startY, startSet };
+}
+
+function drawPreview(gcode) {
+  const canvas = document.getElementById('preview-canvas');
+  const wrap = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(50, wrap.clientWidth);
+  const h = Math.max(50, wrap.clientHeight);
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#0a0e16';
+  ctx.fillRect(0, 0, w, h);
+
+  const { segs, startX, startY, startSet } = parseGCodePaths(gcode);
+  if (!segs.length) {
+    ctx.fillStyle = '#6a7898';
+    ctx.font = '13px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Génère un G-code pour l’aperçu', w / 2, h / 2);
+    return;
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const s of segs) {
+    minX = Math.min(minX, s.x0, s.x1);
+    maxX = Math.max(maxX, s.x0, s.x1);
+    minY = Math.min(minY, s.y0, s.y1);
+    maxY = Math.max(maxY, s.y0, s.y1);
+  }
+  if (startSet) {
+    minX = Math.min(minX, startX); maxX = Math.max(maxX, startX);
+    minY = Math.min(minY, startY); maxY = Math.max(maxY, startY);
+  }
+  // Inclure (0,0) dans le cadrage pour toujours voir l’origine
+  minX = Math.min(minX, 0); maxX = Math.max(maxX, 0);
+  minY = Math.min(minY, 0); maxY = Math.max(maxY, 0);
+
+  const pad = 28;
+  const dx = Math.max(1e-6, maxX - minX);
+  const dy = Math.max(1e-6, maxY - minY);
+  const scale = Math.min((w - 2 * pad) / dx, (h - 2 * pad) / dy);
+  const ox = (w - dx * scale) / 2 - minX * scale;
+  const oy = (h + dy * scale) / 2 + minY * scale;
+
+  function tx(x) { return ox + x * scale; }
+  function ty(y) { return oy - y * scale; }
+
+  function fmtL(v) {
+    const a = Math.abs(v);
+    if (a >= 100) return v.toFixed(1);
+    if (a >= 10) return v.toFixed(2);
+    return v.toFixed(3);
+  }
+
+  // Axes X=0 / Y=0
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(tx(minX), ty(0));
+  ctx.lineTo(tx(maxX), ty(0));
+  ctx.moveTo(tx(0), ty(minY));
+  ctx.lineTo(tx(0), ty(maxY));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Cadre bounds
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(tx(minX), ty(maxY), (maxX - minX) * scale, (maxY - minY) * scale);
+
+  // Segments parcours
+  for (const s of segs) {
+    ctx.beginPath();
+    ctx.moveTo(tx(s.x0), ty(s.y0));
+    ctx.lineTo(tx(s.x1), ty(s.y1));
+    if (s.type === 'rapid') {
+      ctx.strokeStyle = '#64748b';
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1;
+    } else {
+      ctx.strokeStyle = '#f0a030';
+      ctx.setLineDash([]);
+      ctx.lineWidth = 1.5;
+    }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Point départ
+  if (startSet) {
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(tx(startX), ty(startY), 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Point origine (0,0)
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath();
+  ctx.arc(tx(0), ty(0), 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Labels
+  ctx.font = '11px ui-monospace, monospace';
+  ctx.textBaseline = 'middle';
+
+  function labelAt(x, y, text, anchor) {
+    // anchor: 'left' | 'right' | 'top' | 'bottom' | 'center'
+    const px = tx(x);
+    const py = ty(y);
+    let ax = 0, ay = 0;
+    if (anchor === 'left') { ctx.textAlign = 'left'; ax = 6; }
+    else if (anchor === 'right') { ctx.textAlign = 'right'; ax = -6; }
+    else { ctx.textAlign = 'center'; }
+    if (anchor === 'top') ay = -10;
+    else if (anchor === 'bottom') ay = 12;
+    else if (anchor === 'left' || anchor === 'right') ay = 0;
+    else ay = -12;
+
+    const tw = ctx.measureText(text).width;
+    const bx = px + ax - (ctx.textAlign === 'center' ? tw / 2 : ctx.textAlign === 'right' ? tw : 0);
+    const by = py + ay - 7;
+    ctx.fillStyle = 'rgba(10,14,22,0.75)';
+    ctx.fillRect(bx - 3, by, tw + 6, 14);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(text, px + ax, py + ay);
+  }
+
+  // Origine
+  labelAt(0, 0, 'X0,Y0', 'bottom');
+
+  // Extents
+  labelAt(minX, (minY + maxY) / 2, 'Xmin ' + fmtL(minX), 'right');
+  labelAt(maxX, (minY + maxY) / 2, 'Xmax ' + fmtL(maxX), 'left');
+  labelAt((minX + maxX) / 2, minY, 'Ymin ' + fmtL(minY), 'top');
+  labelAt((minX + maxX) / 2, maxY, 'Ymax ' + fmtL(maxY), 'bottom');
+}
+
+window.addEventListener('resize', () => {
+  if (generatedCode) drawPreview(generatedCode);
+});
+
+/* ========== Settings PAR MODE (identique version validée) ========== */
 function settingsPath() {
   return '/sd/plugins/Utility-G-code_Generator/settings.json';
 }
 
 const MODE_MAP = {
-  '1': {
-    key: 'surfacing',
-    fields: {
-      start_x: 'start_x', start_y: 'start_y', start_z: 'start_z',
-      clearance_height: 'clearance_height', tool_diameter: 'tool_diameter',
-      spindle_speed: 'spindle_speed', feed_rate: 'feed_rate',
-      depth_per_pass: 'depth_per_pass', total_depth: 'total_depth',
-      width_x: 'width_x', length_y: 'length_y',
-      overlap_percent: 'overlap_percent', path_type_surf: 'path_type'
-    }
-  },
-  '2': {
-    key: 'contour_drilling',
-    fields: {
-      start_x: 'start_x', start_y: 'start_y', start_z: 'start_z',
-      clearance_height: 'clearance_height', tool_diameter: 'tool_diameter',
-      spindle_speed: 'spindle_speed', feed_rate: 'feed_rate',
-      depth_per_pass: 'depth_per_pass', total_depth: 'total_depth',
-      hole_diameter: 'hole_diameter', drilling_type: 'drilling_type',
-      path_type_contour: 'path_type', overlap_blind: 'overlap_percent'
-    }
-  },
-  '3': {
-    key: 'matrix_drilling',
-    fields: {
-      start_x: 'start_x', start_y: 'start_y', start_z: 'start_z',
-      clearance_height: 'clearance_height', tool_diameter: 'tool_diameter',
-      spindle_speed: 'spindle_speed', feed_rate: 'feed_rate',
-      depth_per_pass: 'depth_per_pass', total_depth: 'total_depth',
-      num_cols: 'num_cols', num_rows: 'num_rows',
-      spacing_x: 'spacing_x', spacing_y: 'spacing_y',
-      deburr_height: 'deburr_height'
-    }
-  },
-  '4': {
-    key: 'corner_radius',
-    fields: {
-      start_x: 'start_x', start_y: 'start_y', start_z: 'start_z',
-      clearance_height: 'clearance_height', tool_diameter: 'tool_diameter',
-      spindle_speed: 'spindle_speed', feed_rate: 'feed_rate',
-      depth_per_pass: 'depth_per_pass', total_depth: 'total_depth',
-      radius: 'radius', corner_type: 'corner_type', path_type_corner: 'path_type'
-    }
-  },
-  '5': {
-    key: 'oblong_hole',
-    fields: {
-      start_x: 'start_x', start_y: 'start_y', start_z: 'start_z',
-      clearance_height: 'clearance_height', tool_diameter: 'tool_diameter',
-      spindle_speed: 'spindle_speed', feed_rate: 'feed_rate',
-      depth_per_pass: 'depth_per_pass', total_depth: 'total_depth',
-      ob_length_x: 'length_x', ob_length_y: 'length_y',
-      ob_width: 'width', path_type_oblong: 'path_type'
-    }
-  },
-  '6': {
-    key: 'threading',
-    fields: {
-      start_x: 'start_x', start_y: 'start_y', start_z: 'start_z',
-      clearance_height: 'clearance_height', tool_diameter: 'tool_diameter',
-      spindle_speed: 'spindle_speed', feed_rate: 'feed_rate',
-      depth_per_pass: 'depth_per_pass', total_depth: 'total_depth',
-      th_hole_diameter: 'hole_diameter', thread_type: 'thread_type',
-      path_type_thread: 'path_type', thread_pitch: 'thread_pitch',
-      thread_number: 'thread_number'
-    }
-  }
+  '1': { key: 'surfacing', fields: {
+    start_x:'start_x', start_y:'start_y', start_z:'start_z', clearance_height:'clearance_height',
+    tool_diameter:'tool_diameter', spindle_speed:'spindle_speed', feed_rate:'feed_rate',
+    depth_per_pass:'depth_per_pass', total_depth:'total_depth', width_x:'width_x', length_y:'length_y',
+    overlap_percent:'overlap_percent', path_type_surf:'path_type'
+  }},
+  '2': { key: 'contour_drilling', fields: {
+    start_x:'start_x', start_y:'start_y', start_z:'start_z', clearance_height:'clearance_height',
+    tool_diameter:'tool_diameter', spindle_speed:'spindle_speed', feed_rate:'feed_rate',
+    depth_per_pass:'depth_per_pass', total_depth:'total_depth', hole_diameter:'hole_diameter',
+    drilling_type:'drilling_type', path_type_contour:'path_type', overlap_blind:'overlap_percent'
+  }},
+  '3': { key: 'matrix_drilling', fields: {
+    start_x:'start_x', start_y:'start_y', start_z:'start_z', clearance_height:'clearance_height',
+    tool_diameter:'tool_diameter', spindle_speed:'spindle_speed', feed_rate:'feed_rate',
+    depth_per_pass:'depth_per_pass', total_depth:'total_depth', num_cols:'num_cols', num_rows:'num_rows',
+    spacing_x:'spacing_x', spacing_y:'spacing_y', deburr_height:'deburr_height'
+  }},
+  '4': { key: 'corner_radius', fields: {
+    start_x:'start_x', start_y:'start_y', start_z:'start_z', clearance_height:'clearance_height',
+    tool_diameter:'tool_diameter', spindle_speed:'spindle_speed', feed_rate:'feed_rate',
+    depth_per_pass:'depth_per_pass', total_depth:'total_depth', radius:'radius',
+    corner_type:'corner_type', path_type_corner:'path_type'
+  }},
+  '5': { key: 'oblong_hole', fields: {
+    start_x:'start_x', start_y:'start_y', start_z:'start_z', clearance_height:'clearance_height',
+    tool_diameter:'tool_diameter', spindle_speed:'spindle_speed', feed_rate:'feed_rate',
+    depth_per_pass:'depth_per_pass', total_depth:'total_depth', ob_length_x:'length_x',
+    ob_length_y:'length_y', ob_width:'width', path_type_oblong:'path_type'
+  }},
+  '6': { key: 'threading', fields: {
+    start_x:'start_x', start_y:'start_y', start_z:'start_z', clearance_height:'clearance_height',
+    tool_diameter:'tool_diameter', spindle_speed:'spindle_speed', feed_rate:'feed_rate',
+    depth_per_pass:'depth_per_pass', total_depth:'total_depth', th_hole_diameter:'hole_diameter',
+    thread_type:'thread_type', path_type_thread:'path_type', thread_pitch:'thread_pitch',
+    thread_number:'thread_number'
+  }}
 };
 
 let settingsCache = {
-  last_operation: '1',
-  project_name: 'test',
-  machine: 'CNC_450x800',
-  global_units: 'mm',
-  global_feed_rate_percent: '50%',
-  language: 'fr',
-  surfacing: {},
-  contour_drilling: {},
-  matrix_drilling: {},
-  corner_radius: {},
-  oblong_hole: {},
-  threading: {}
+  last_operation: '1', project_name: 'test', machine: 'CNC_450x800',
+  global_units: 'mm', global_feed_rate_percent: '50%', language: 'fr',
+  surfacing: {}, contour_drilling: {}, matrix_drilling: {},
+  corner_radius: {}, oblong_hole: {}, threading: {}
 };
 
 function parseFieldValue(el) {
@@ -413,7 +671,6 @@ function parseFieldValue(el) {
   const n = parseFloat(v);
   return (v !== '' && Number.isFinite(n)) ? n : v;
 }
-
 function readModeFromForm(op) {
   const map = MODE_MAP[op];
   if (!map) return {};
@@ -424,18 +681,14 @@ function readModeFromForm(op) {
   }
   return obj;
 }
-
 function writeModeToForm(op, section) {
   const map = MODE_MAP[op];
   if (!map || !section) return;
   for (const [htmlId, jsonKey] of Object.entries(map.fields)) {
     const el = document.getElementById(htmlId);
-    if (el && section[jsonKey] !== undefined && section[jsonKey] !== null) {
-      el.value = section[jsonKey];
-    }
+    if (el && section[jsonKey] !== undefined && section[jsonKey] !== null) el.value = section[jsonKey];
   }
 }
-
 function captureMode(op) {
   const map = MODE_MAP[op];
   if (!map) return;
@@ -446,69 +699,49 @@ function captureMode(op) {
   settingsCache.global_units = str('global_units') || 'mm';
   settingsCache.global_feed_rate_percent = (str('plunge_percent') || '50') + '%';
 }
-
 async function saveSettings() {
-  const op = str('operation') || '1';
-  captureMode(op);
+  captureMode(str('operation') || '1');
   try {
-    await call('writeFile', {
-      path: settingsPath(),
-      content: JSON.stringify(settingsCache, null, 4),
-      fs: 'sd'
-    });
+    await call('writeFile', { path: settingsPath(), content: JSON.stringify(settingsCache, null, 4), fs: 'sd' });
     return true;
   } catch (e) {
     setStatus('Settings: ' + (e.message || e), 'err');
     return false;
   }
 }
-
 async function loadSettings() {
   try {
     const text = await call('readFile', { path: settingsPath(), fs: 'sd' });
     const s = JSON.parse(text);
     if (s && typeof s === 'object') {
-      if (s.surfacing || s.threading || s.contour_drilling || s.last_operation) {
-        Object.assign(settingsCache, s);
-      } else {
-        /* migration ancien format plat */
+      if (s.surfacing || s.threading || s.last_operation) Object.assign(settingsCache, s);
+      else {
         const op = String(s.operation || '1');
         settingsCache.last_operation = op;
         settingsCache.project_name = s.project_name || settingsCache.project_name;
         settingsCache.machine = s.machine || settingsCache.machine;
         settingsCache.global_units = s.global_units || 'mm';
-        if (s.plunge_percent !== undefined) {
-          settingsCache.global_feed_rate_percent = String(s.plunge_percent).replace('%','') + '%';
-        }
+        if (s.plunge_percent !== undefined) settingsCache.global_feed_rate_percent = String(s.plunge_percent).replace('%','') + '%';
         const map = MODE_MAP[op];
         if (map) {
           const section = {};
           for (const [htmlId, jsonKey] of Object.entries(map.fields)) {
             if (s[htmlId] !== undefined) {
               const n = parseFloat(s[htmlId]);
-              section[jsonKey] = (s[htmlId] !== '' && Number.isFinite(n) && document.getElementById(htmlId)?.tagName !== 'SELECT') ? n : s[htmlId];
+              section[jsonKey] = Number.isFinite(n) && document.getElementById(htmlId)?.tagName !== 'SELECT' ? n : s[htmlId];
             }
           }
-          ['start_x','start_y','start_z','clearance_height','tool_diameter','spindle_speed','feed_rate','depth_per_pass','total_depth'].forEach(k => {
-            if (s[k] !== undefined) {
-              const n = parseFloat(s[k]);
-              section[k] = Number.isFinite(n) ? n : s[k];
-            }
-          });
           settingsCache[map.key] = section;
         }
       }
     }
   } catch (_) {}
-
   const op = String(settingsCache.last_operation || '1');
   document.getElementById('operation').value = op;
   document.getElementById('project_name').value = settingsCache.project_name || 'test';
   document.getElementById('machine').value = settingsCache.machine || 'CNC';
   document.getElementById('global_units').value = settingsCache.global_units || 'mm';
-  document.getElementById('plunge_percent').value =
-    String(settingsCache.global_feed_rate_percent || '50%').replace('%', '').trim() || '50';
-
+  document.getElementById('plunge_percent').value = String(settingsCache.global_feed_rate_percent || '50%').replace('%','').trim() || '50';
   showModePanel(op);
   const map = MODE_MAP[op];
   if (map && settingsCache[map.key]) writeModeToForm(op, settingsCache[map.key]);
@@ -525,9 +758,7 @@ async function loadSettings() {
     const newOp = sel.value;
     showModePanel(newOp);
     const map = MODE_MAP[newOp];
-    if (map && settingsCache[map.key] && Object.keys(settingsCache[map.key]).length) {
-      writeModeToForm(newOp, settingsCache[map.key]);
-    }
+    if (map && settingsCache[map.key] && Object.keys(settingsCache[map.key]).length) writeModeToForm(newOp, settingsCache[map.key]);
     settingsCache.last_operation = newOp;
     await saveSettings();
     prevOp = newOp;
@@ -535,28 +766,21 @@ async function loadSettings() {
   });
 })();
 
-/* ========== Header / footer ========== */
+/* ========== Générateurs (inchangés) ========== */
 function generateHeader(p, stockX, stockY, stockZ) {
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
   const units = p.global_units === 'in' ? 'G20' : 'G21';
   return [
     '; NC from Utility-G-code Generator (FigUI)',
-    '; ' + p.project_name,
-    '; ' + now,
-    '; ' + p.machine,
+    '; ' + p.project_name, '; ' + now, '; ' + p.machine,
     `; (${fmt(stockX)}, ${fmt(stockY)}, ${fmt(stockZ)} ${p.global_units})`,
-    `${units} ;(${p.global_units})`,
-    'G90',
-    `M3 S${Math.round(p.spindle_speed)}`,
-    'G04 P5',
-    ''
+    `${units} ;(${p.global_units})`, 'G90', `M3 S${Math.round(p.spindle_speed)}`, 'G04 P5', ''
   ].join('\n');
 }
 function footer(clearance) {
   return [`G00 Z${fmt(clearance)}`, 'G90', 'M5', 'M30'].join('\n');
 }
 
-/* ========== Générateurs ========== */
 function genSurfacing(p) {
   const pathCode = { conventional: '1', climb: '2', alternate: '3' }[p.path_type] || '1';
   const labels = { conventional: 'Opposition', climb: 'Avalant', alternate: 'Alterné' };
@@ -859,8 +1083,9 @@ async function generate() {
     generatedCode = generateHeader(p, result.stockX, result.stockY, result.stockZ) + '\n' + result.body + '\n' + footer(p.clearance_height);
     document.getElementById('gcode-output').value = generatedCode;
     document.getElementById('open-btn').disabled = false;
+    requestAnimationFrame(() => drawPreview(generatedCode));
     const ok = await saveSettings();
-    setStatus(ok ? 'G-code généré · settings OK' : 'G-code généré · settings ÉCHEC', ok ? 'ok' : 'err');
+    setStatus(ok ? 'G-code généré · aperçu OK' : 'G-code généré · settings ÉCHEC', ok ? 'ok' : 'err');
   } catch (e) {
     setStatus(e.message || String(e), 'err');
   }
@@ -893,6 +1118,7 @@ async function openInViewer() {
 }
 
 loadSettings();
+setTimeout(() => drawPreview(''), 50);
 </script>
 </body>
 </html>
