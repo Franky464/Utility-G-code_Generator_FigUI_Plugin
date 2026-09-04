@@ -145,138 +145,262 @@ select { cursor: pointer; }
   .main-split { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
   .panel-left { border-right: none; border-bottom: 1px solid var(--border, #222840); }
 }
+
+.language-section { padding-top: 8px; padding-bottom: 8px; }
+.language-section select { font-weight: 600; }
 </style>
 
-<style id="i18n-style">
-.language-bar {
-  position: fixed;
-  top: 10px;
-  right: 14px;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 9px;
-  background: rgba(20, 26, 38, .96);
-  border: 1px solid #3b465d;
-  border-radius: 8px;
-  color: #dce3f2;
-  font: 13px system-ui, sans-serif;
-  box-shadow: 0 4px 14px rgba(0,0,0,.25);
-}
-.language-bar select {
-  background: #111722;
-  color: #e8edf7;
-  border: 1px solid #46536d;
-  border-radius: 5px;
-  padding: 3px 6px;
-}
-</style>
-
-
-<script id="i18n-script">
+<script>
+/* ============================================================
+   Interface multilingue : Français / English
+   Les IDs, valeurs des SELECT et le G-code restent inchangés.
+   ============================================================ */
 const I18N = {
   fr: {
-    language:"Langue", operationMode:"Mode d'opération", project:"Projet (commun)",
-    projectName:"Nom projet", machine:"Machine", units:"Unités", plungePercent:"Plongée (%)",
-    operation:"Opération", surfacing:"Surfaçage", contourDrilling:"Perçages par détourage",
-    matrixDrilling:"Perçages matrice (RAST)", cornerRadius:"Rayon sur 90°", oblongHole:"Trou oblong",
-    threading:"Filetage", clearance:"Dégagement Z", toolAndSpeeds:"Outil & vitesses",
-    toolDiameter:"Ø outil (mm)", spindleSpeed:"Broche RPM", feedRate:"Feed (mm/min)",
-    depthPerPass:"Prof. / passe", totalDepth:"Profondeur totale (mm)",
-    startPosition:"Position départ (par mode)", startX:"Start X", startY:"Start Y", startZ:"Start Z",
-    rastMatrix:"Matrice RAST", columns:"Colonnes", rows:"Lignes", pitchX:"Pas X", pitchY:"Pas Y",
-    peckHeight:"Hauteur débourrage", generateGcode:"Générer G-code", preview:"Aperçu",
-    settingsLoaded:"Réglages chargés", settingsSaved:"Réglages enregistrés",
-    gcodeGeneratedPreviewOk:"G-code généré · aperçu OK",
-    gcodeGeneratedSettingsError:"G-code généré · settings ÉCHEC",
-    generateFirst:"Génère d’abord le G-code", saving:"Enregistrement…",
-    loadedInViewer:"Chargé dans le viewer", previewEmpty:"Génère un G-code pour l’aperçu"
+    language: "Langue",
+    operationMode: "Mode d'opération",
+    project: "Projet (commun)",
+    projectName: "Nom projet",
+    machine: "Machine",
+    units: "Unités",
+    plungePercent: "Plongée %",
+    startPosition: "Position départ (par mode)",
+    startX: "Départ X",
+    startY: "Départ Y",
+    startZ: "Départ Z",
+    clearance: "Dégagement Z",
+    toolAndSpeeds: "Outil & vitesses (par mode)",
+    toolDiameter: "Ø outil (mm)",
+    spindleSpeed: "Broche RPM",
+    feedRate: "Avance (mm/min)",
+    depthPerPass: "Prof. / passe",
+    totalDepth: "Profondeur totale (mm)",
+    surfacing: "Surfaçage",
+    contourDrilling: "Perçage détourage",
+    matrixDrilling: "Matrice RAST",
+    cornerRadius: "Rayon 90°",
+    oblongHole: "Trou oblong",
+    threading: "Filetage",
+    widthX: "Largeur X",
+    lengthY: "Longueur Y",
+    lengthX: "Longueur X",
+    overlapPercent: "Chevauchement %",
+    pathType: "Type de parcours",
+    holeDiameter: "Ø trou (mm)",
+    drillingType: "Type perçage",
+    path: "Parcours",
+    blindOverlap: "Chevauchement % (borgne)",
+    columns: "Colonnes",
+    rows: "Lignes",
+    spacingX: "Pas X",
+    spacingY: "Pas Y",
+    deburrHeight: "Hauteur débourrage",
+    radius: "Rayon (mm)",
+    corner: "Coin",
+    width: "Largeur (mm)",
+    threadHoleDiameter: "Ø trou / pièce (mm)",
+    type: "Type",
+    direction: "Sens",
+    threadPitch: "Pas filet",
+    threadCount: "Nb filets",
+    generateGcode: "Générer G-code",
+    gcode: "G-code",
+    preview2d: "2D (XY)",
+    start: "Départ",
+    rapidG0: "Rapide G0",
+    cuttingG1G2G3: "Usinage G1/G2/G3",
+    openViewer: "Ouvrir dans le viewer",
+    opSurfacing: "1 – Surfaçage",
+    opContour: "2 – Perçages par détourage",
+    opMatrix: "3 – Perçages matrice (RAST)",
+    opCorner: "4 – Rayon sur 90°",
+    opOblong: "5 – Trou oblong",
+    opThread: "6 – Filetage",
+    opposition: "Opposition",
+    climb: "Avalant",
+    alternate: "Alterné",
+    throughHole: "Trou traversant (contour)",
+    blindHole: "Trou borgne",
+    outerDiameter: "Diamètre extérieur",
+    oppositionG02: "Opposition (G02)",
+    climbG03: "Avalant (G03)",
+    frontLeft: "Avant Gauche (AVG)",
+    frontRight: "Avant Droit (AVD)",
+    rearRight: "Arrière Droit (ARD)",
+    rearLeft: "Arrière Gauche (ARG)",
+    internalNut: "Écrou (interne)",
+    externalScrew: "Vis (externe)",
+    rightG02: "Droite (G02)",
+    leftG03: "Gauche (G03)",
+    previewEmpty: "Génère un G-code pour l’aperçu",
+    settingsLoaded: "Réglages chargés",
+    modeLoaded: "Mode {mode} chargé",
+    gcodeGeneratedPreviewOk: "G-code généré · aperçu OK",
+    gcodeGeneratedSettingsError: "G-code généré · settings ÉCHEC",
+    generateFirst: "Génère d’abord le G-code",
+    saving: "Enregistrement…",
+    loadedInViewer: "Chargé dans le viewer",
+    savedOpenFiles: "Sauvé : {path} — ouvre dans Files",
+    error: "Erreur : {message}",
+    holeToolError: "Ø trou > Ø outil",
+    pitchThreadError: "Pas et nb filets > 0"
   },
   en: {
-    language:"Language", operationMode:"Operation mode", project:"Project (common)",
-    projectName:"Project name", machine:"Machine", units:"Units", plungePercent:"Plunge (%)",
-    operation:"Operation", surfacing:"Surfacing", contourDrilling:"Contour drilling",
-    matrixDrilling:"Matrix drilling (RAST)", cornerRadius:"90° corner radius", oblongHole:"Slot / oblong hole",
-    threading:"Threading", clearance:"Z clearance", toolAndSpeeds:"Tool & speeds",
-    toolDiameter:"Tool diameter (mm)", spindleSpeed:"Spindle RPM", feedRate:"Feed (mm/min)",
-    depthPerPass:"Depth / pass", totalDepth:"Total depth (mm)",
-    startPosition:"Start position (per mode)", startX:"Start X", startY:"Start Y", startZ:"Start Z",
-    rastMatrix:"RAST matrix", columns:"Columns", rows:"Rows", pitchX:"X pitch", pitchY:"Y pitch",
-    peckHeight:"Peck height", generateGcode:"Generate G-code", preview:"Preview",
-    settingsLoaded:"Settings loaded", settingsSaved:"Settings saved",
-    gcodeGeneratedPreviewOk:"G-code generated · preview OK",
-    gcodeGeneratedSettingsError:"G-code generated · settings FAILED",
-    generateFirst:"Generate the G-code first", saving:"Saving…",
-    loadedInViewer:"Loaded in viewer", previewEmpty:"Generate G-code for the preview"
+    language: "Language",
+    operationMode: "Operation mode",
+    project: "Project (common)",
+    projectName: "Project name",
+    machine: "Machine",
+    units: "Units",
+    plungePercent: "Plunge %",
+    startPosition: "Start position (per mode)",
+    startX: "Start X",
+    startY: "Start Y",
+    startZ: "Start Z",
+    clearance: "Z clearance",
+    toolAndSpeeds: "Tool & speeds (per mode)",
+    toolDiameter: "Tool diameter (mm)",
+    spindleSpeed: "Spindle RPM",
+    feedRate: "Feed rate (mm/min)",
+    depthPerPass: "Depth / pass",
+    totalDepth: "Total depth (mm)",
+    surfacing: "Surfacing",
+    contourDrilling: "Contour drilling",
+    matrixDrilling: "RAST matrix",
+    cornerRadius: "90° corner radius",
+    oblongHole: "Slot / oblong hole",
+    threading: "Threading",
+    widthX: "Width X",
+    lengthY: "Length Y",
+    lengthX: "Length X",
+    overlapPercent: "Overlap %",
+    pathType: "Path type",
+    holeDiameter: "Hole Ø (mm)",
+    drillingType: "Drilling type",
+    path: "Path",
+    blindOverlap: "Overlap % (blind)",
+    columns: "Columns",
+    rows: "Rows",
+    spacingX: "Spacing X",
+    spacingY: "Spacing Y",
+    deburrHeight: "Deburring height",
+    radius: "Radius (mm)",
+    corner: "Corner",
+    width: "Width (mm)",
+    threadHoleDiameter: "Hole / part Ø (mm)",
+    type: "Type",
+    direction: "Direction",
+    threadPitch: "Thread pitch",
+    threadCount: "Thread count",
+    generateGcode: "Generate G-code",
+    gcode: "G-code",
+    preview2d: "2D (XY)",
+    start: "Start",
+    rapidG0: "Rapid G0",
+    cuttingG1G2G3: "Cutting G1/G2/G3",
+    openViewer: "Open in viewer",
+    opSurfacing: "1 – Surfacing",
+    opContour: "2 – Contour drilling",
+    opMatrix: "3 – Matrix drilling (RAST)",
+    opCorner: "4 – 90° corner radius",
+    opOblong: "5 – Slot / oblong hole",
+    opThread: "6 – Threading",
+    opposition: "Conventional",
+    climb: "Climb",
+    alternate: "Alternating",
+    throughHole: "Through hole (contour)",
+    blindHole: "Blind hole",
+    outerDiameter: "Outer diameter",
+    oppositionG02: "Conventional (G02)",
+    climbG03: "Climb (G03)",
+    frontLeft: "Front Left (AVG)",
+    frontRight: "Front Right (AVD)",
+    rearRight: "Rear Right (ARD)",
+    rearLeft: "Rear Left (ARG)",
+    internalNut: "Nut (internal)",
+    externalScrew: "Screw (external)",
+    rightG02: "Right (G02)",
+    leftG03: "Left (G03)",
+    previewEmpty: "Generate G-code for the preview",
+    settingsLoaded: "Settings loaded",
+    modeLoaded: "Mode {mode} loaded",
+    gcodeGeneratedPreviewOk: "G-code generated · preview OK",
+    gcodeGeneratedSettingsError: "G-code generated · settings FAILED",
+    generateFirst: "Generate the G-code first",
+    saving: "Saving…",
+    loadedInViewer: "Loaded in viewer",
+    savedOpenFiles: "Saved: {path} — open it in Files",
+    error: "Error: {message}",
+    holeToolError: "Hole Ø > tool Ø",
+    pitchThreadError: "Pitch and thread count > 0"
   }
 };
 
-function uiLang() {
+function getLanguage() {
   return (typeof settingsCache !== "undefined" &&
           (settingsCache.language === "en" || settingsCache.language === "fr"))
-         ? settingsCache.language : "fr";
+    ? settingsCache.language : "fr";
 }
-function t(key) {
-  return (I18N[uiLang()] && I18N[uiLang()][key]) || I18N.fr[key] || key;
+
+function tr(key, vars = {}) {
+  const lang = getLanguage();
+  let text = I18N[lang]?.[key] ?? I18N.fr[key] ?? key;
+  Object.entries(vars).forEach(([k, v]) => {
+    text = text.replaceAll("{" + k + "}", String(v));
+  });
+  return text;
 }
+
 function applyLanguage() {
-  const lang = uiLang();
+  const lang = getLanguage();
   document.documentElement.lang = lang;
-  const select = document.getElementById("language-select");
-  if (select) select.value = lang;
-  const label = document.getElementById("language-label");
-  if (label) label.textContent = t("language");
+
+  const selector = document.getElementById("language-select");
+  if (selector) selector.value = lang;
 
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.dataset.i18n;
-    if (I18N[lang][key]) el.textContent = I18N[lang][key];
-  });
-
-  // Restore the operation selector labels from the translation table.
-  document.querySelectorAll("#operation option[data-i18n]").forEach(el => {
-    const key = el.dataset.i18n;
-    if (I18N[lang][key]) el.textContent = I18N[lang][key];
+    if (I18N[lang]?.[key]) el.textContent = I18N[lang][key];
   });
 }
 
 async function changeLanguage(lang) {
-  if (lang !== "fr" && lang !== "en") lang = "fr";
-  settingsCache.language = lang;
+  settingsCache.language = (lang === "en") ? "en" : "fr";
   applyLanguage();
   try { await saveSettings(); } catch (_) {}
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const select = document.getElementById("language-select");
-  if (select) select.addEventListener("change", e => changeLanguage(e.target.value));
+  const selector = document.getElementById("language-select");
+  if (selector) {
+    selector.addEventListener("change", () => changeLanguage(selector.value));
+  }
   applyLanguage();
 });
 </script>
 
 </head>
 <body>
-
-<div id="language-bar" class="language-bar">
-  <span class="language-icon">🌐</span>
-  <label for="language-select" id="language-label">Langue</label>
-  <select id="language-select">
-    <option value="fr">Français</option>
-    <option value="en">English</option>
-  </select>
-</div>
-
 <div class="layout">
   <div class="sidebar">
+
+    <div class="section language-section">
+      <div class="section-title" data-i18n="language">Langue</div>
+      <select id="language-select" aria-label="Language">
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
     <div class="section">
       <div class="section-title" data-i18n="operationMode">Mode d'opération</div>
       <select id="operation" class="mode-select">
-        <option value="1" data-i18n="surfacing">1 – Surfaçage</option>
-        <option value="2" data-i18n="contourDrilling">2 – Perçages par détourage</option>
-        <option value="3" data-i18n="matrixDrilling">3 – Perçages matrice (RAST)</option>
-        <option value="4" data-i18n="cornerRadius">4 – Rayon sur 90°</option>
-        <option value="5" data-i18n="oblongHole">5 – Trou oblong</option>
-        <option value="6" data-i18n="threading">6 – Filetage</option>
+        <option value="1" data-i18n="opSurfacing">1 – Surfaçage</option>
+        <option value="2" data-i18n="opContour">2 – Perçages par détourage</option>
+        <option value="3" data-i18n="opMatrix">3 – Perçages matrice (RAST)</option>
+        <option value="4" data-i18n="opCorner">4 – Rayon sur 90°</option>
+        <option value="5" data-i18n="opOblong">5 – Trou oblong</option>
+        <option value="6" data-i18n="opThread">6 – Filetage</option>
       </select>
     </div>
     <div class="section">
@@ -294,7 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </select>
         </div>
         <div>
-          <label>Plongée %</label>
+          <label data-i18n="plungePercent">Plongée %</label>
           <input type="number" id="plunge_percent" value="50" min="1" max="100" step="1">
         </div>
       </div>
@@ -311,7 +435,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     </div>
     <div class="section">
-      <div class="section-title">Outil & vitesses (par mode)</div>
+      <div class="section-title" data-i18n="toolAndSpeeds">Outil & vitesses (par mode)</div>
       <div class="row2">
         <div><label data-i18n="toolDiameter">Ø outil (mm)</label><input type="number" id="tool_diameter" value="10" min="0.1" step="0.1"></div>
         <div><label data-i18n="spindleSpeed">Broche RPM</label><input type="number" id="spindle_speed" value="1000" min="0" step="100"></div>
@@ -326,97 +450,97 @@ document.addEventListener("DOMContentLoaded", () => {
     <div class="section mode-panel" id="panel-1">
       <div class="section-title" data-i18n="surfacing">Surfaçage</div>
       <div class="row2">
-        <div><label>Largeur X</label><input type="number" id="width_x" value="100" min="0.1" step="0.1"></div>
-        <div><label>Longueur Y</label><input type="number" id="length_y" value="100" min="0.1" step="0.1"></div>
+        <div><label data-i18n="widthX">Largeur X</label><input type="number" id="width_x" value="100" min="0.1" step="0.1"></div>
+        <div><label data-i18n="lengthY">Longueur Y</label><input type="number" id="length_y" value="100" min="0.1" step="0.1"></div>
       </div>
-      <label>Chevauchement %</label>
+      <label data-i18n="overlapPercent">Chevauchement %</label>
       <input type="number" id="overlap_percent" value="50" min="0" max="99" step="1">
-      <label>Type de parcours</label>
+      <label data-i18n="pathType">Type de parcours</label>
       <select id="path_type_surf">
-        <option value="conventional">Opposition</option>
-        <option value="climb">Avalant</option>
-        <option value="alternate">Alterné</option>
+        <option value="conventional" data-i18n="opposition">Opposition</option>
+        <option value="climb" data-i18n="climb">Avalant</option>
+        <option value="alternate" data-i18n="alternate">Alterné</option>
       </select>
     </div>
     <div class="section mode-panel hidden" id="panel-2">
-      <div class="section-title">Perçage détourage</div>
-      <label>Ø trou (mm)</label>
+      <div class="section-title" data-i18n="contourDrilling">Perçage détourage</div>
+      <label data-i18n="holeDiameter">Ø trou (mm)</label>
       <input type="number" id="hole_diameter" value="30" min="0.1" step="0.1">
-      <label>Type perçage</label>
+      <label data-i18n="drillingType">Type perçage</label>
       <select id="drilling_type">
-        <option value="contour">Trou traversant (contour)</option>
-        <option value="blind">Trou borgne</option>
-        <option value="outer">Diamètre extérieur</option>
+        <option value="contour" data-i18n="throughHole">Trou traversant (contour)</option>
+        <option value="blind" data-i18n="blindHole">Trou borgne</option>
+        <option value="outer" data-i18n="outerDiameter">Diamètre extérieur</option>
       </select>
-      <label>Parcours</label>
+      <label data-i18n="path">Parcours</label>
       <select id="path_type_contour">
-        <option value="conventional">Opposition (G02)</option>
-        <option value="climb">Avalant (G03)</option>
+        <option value="conventional" data-i18n="oppositionG02">Opposition (G02)</option>
+        <option value="climb" data-i18n="climbG03">Avalant (G03)</option>
       </select>
-      <label>Chevauchement % (borgne)</label>
+      <label data-i18n="blindOverlap">Chevauchement % (borgne)</label>
       <input type="number" id="overlap_blind" value="50" min="0" max="99" step="1">
     </div>
     <div class="section mode-panel hidden" id="panel-3">
-      <div class="section-title" data-i18n="rastMatrix">Matrice RAST</div>
+      <div class="section-title" data-i18n="matrixDrilling">Matrice RAST</div>
       <div class="row2">
         <div><label data-i18n="columns">Colonnes</label><input type="number" id="num_cols" value="3" min="1" step="1"></div>
         <div><label data-i18n="rows">Lignes</label><input type="number" id="num_rows" value="3" min="1" step="1"></div>
       </div>
       <div class="row2">
-        <div><label data-i18n="pitchX">Pas X</label><input type="number" id="spacing_x" value="10" min="0" step="0.1"></div>
-        <div><label data-i18n="pitchY">Pas Y</label><input type="number" id="spacing_y" value="10" min="0" step="0.1"></div>
+        <div><label data-i18n="spacingX">Pas X</label><input type="number" id="spacing_x" value="10" min="0" step="0.1"></div>
+        <div><label data-i18n="spacingY">Pas Y</label><input type="number" id="spacing_y" value="10" min="0" step="0.1"></div>
       </div>
-      <label data-i18n="peckHeight">Hauteur débourrage</label>
+      <label data-i18n="deburrHeight">Hauteur débourrage</label>
       <input type="number" id="deburr_height" value="2" min="0.1" step="0.1">
     </div>
     <div class="section mode-panel hidden" id="panel-4">
-      <div class="section-title">Rayon 90°</div>
-      <label>Rayon (mm)</label>
+      <div class="section-title" data-i18n="cornerRadius">Rayon 90°</div>
+      <label data-i18n="radius">Rayon (mm)</label>
       <input type="number" id="radius" value="10" min="0.1" step="0.1">
-      <label>Coin</label>
+      <label data-i18n="corner">Coin</label>
       <select id="corner_type">
-        <option value="front_left">Avant Gauche (AVG)</option>
-        <option value="front_right">Avant Droit (AVD)</option>
-        <option value="rear_right">Arrière Droit (ARD)</option>
-        <option value="rear_left">Arrière Gauche (ARG)</option>
+        <option value="front_left" data-i18n="frontLeft">Avant Gauche (AVG)</option>
+        <option value="front_right" data-i18n="frontRight">Avant Droit (AVD)</option>
+        <option value="rear_right" data-i18n="rearRight">Arrière Droit (ARD)</option>
+        <option value="rear_left" data-i18n="rearLeft">Arrière Gauche (ARG)</option>
       </select>
       <label>Parcours</label>
       <select id="path_type_corner">
-        <option value="conventional">Opposition</option>
-        <option value="climb">Avalant</option>
+        <option value="conventional" data-i18n="opposition">Opposition</option>
+        <option value="climb" data-i18n="climb">Avalant</option>
       </select>
     </div>
     <div class="section mode-panel hidden" id="panel-5">
       <div class="section-title" data-i18n="oblongHole">Trou oblong</div>
       <div class="row2">
-        <div><label>Longueur X</label><input type="number" id="ob_length_x" value="20" min="0" step="0.1"></div>
+        <div><label data-i18n="lengthX">Longueur X</label><input type="number" id="ob_length_x" value="20" min="0" step="0.1"></div>
         <div><label>Longueur Y</label><input type="number" id="ob_length_y" value="20" min="0" step="0.1"></div>
       </div>
-      <label>Largeur (mm)</label>
+      <label data-i18n="width">Largeur (mm)</label>
       <input type="number" id="ob_width" value="10" min="0.1" step="0.1">
       <label>Parcours</label>
       <select id="path_type_oblong">
-        <option value="conventional">Opposition</option>
-        <option value="climb">Avalant</option>
+        <option value="conventional" data-i18n="opposition">Opposition</option>
+        <option value="climb" data-i18n="climb">Avalant</option>
       </select>
     </div>
     <div class="section mode-panel hidden" id="panel-6">
       <div class="section-title" data-i18n="threading">Filetage</div>
-      <label>Ø trou / pièce (mm)</label>
+      <label data-i18n="threadHoleDiameter">Ø trou / pièce (mm)</label>
       <input type="number" id="th_hole_diameter" value="30" min="0.1" step="0.1">
-      <label>Type</label>
+      <label data-i18n="type">Type</label>
       <select id="thread_type">
-        <option value="nut_internal">Écrou (interne)</option>
-        <option value="screw_external">Vis (externe)</option>
+        <option value="nut_internal" data-i18n="internalNut">Écrou (interne)</option>
+        <option value="screw_external" data-i18n="externalScrew">Vis (externe)</option>
       </select>
-      <label>Sens</label>
+      <label data-i18n="direction">Sens</label>
       <select id="path_type_thread">
-        <option value="right">Droite (G02)</option>
-        <option value="left">Gauche (G03)</option>
+        <option value="right" data-i18n="rightG02">Droite (G02)</option>
+        <option value="left" data-i18n="leftG03">Gauche (G03)</option>
       </select>
       <div class="row2">
-        <div><label>Pas filet</label><input type="number" id="thread_pitch" value="1.5" min="0.01" step="0.05"></div>
-        <div><label>Nb filets</label><input type="number" id="thread_number" value="6" min="1" step="1"></div>
+        <div><label data-i18n="threadPitch">Pas filet</label><input type="number" id="thread_pitch" value="1.5" min="0.01" step="0.05"></div>
+        <div><label data-i18n="threadCount">Nb filets</label><input type="number" id="thread_number" value="6" min="1" step="1"></div>
       </div>
     </div>
     <button class="generate-btn" onclick="generate()" data-i18n="generateGcode">Générer G-code</button>
@@ -425,23 +549,23 @@ document.addEventListener("DOMContentLoaded", () => {
   <div class="main">
     <div class="main-split">
       <div class="panel panel-left">
-        <div class="panel-header">G-code</div>
+        <div class="panel-header" data-i18n="gcode">G-code</div>
         <textarea id="gcode-output" readonly spellcheck="false" placeholder="Le G-code apparaîtra ici..."></textarea>
       </div>
       <div class="panel">
-        <div class="panel-header">  2D (XY)</div>
+        <div class="panel-header" data-i18n="preview2d">2D (XY)</div>
         <div class="viz-wrap">
           <canvas id="preview-canvas"></canvas>
           <div class="viz-legend">
-            <div><span class="leg-start"></span> Départ</div>
-            <div><span class="leg-rapid"></span> Rapide G0</div>
-            <div><span class="leg-cut"></span> Usinage G1/G2/G3</div>
+            <div><span class="leg-start"></span> <span data-i18n="start">Départ</span></div>
+            <div><span class="leg-rapid"></span> <span data-i18n="rapidG0">Rapide G0</span></div>
+            <div><span class="leg-cut"></span> <span data-i18n="cuttingG1G2G3">Usinage G1/G2/G3</span></div>
           </div>
         </div>
       </div>
     </div>
     <div class="action-bar">
-      <button class="action-btn" id="open-btn" onclick="openInViewer()" disabled>Open in Viewer</button>
+      <button class="action-btn" id="open-btn" onclick="openInViewer()" disabled data-i18n="openViewer">Ouvrir dans le viewer</button>
       <span id="status"></span>
     </div>
   </div>
@@ -606,7 +730,7 @@ function drawPreview(gcode) {
     ctx.fillStyle = '#6a7898';
     ctx.font = '13px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('Génère un G-code pour l’aperçu', w / 2, h / 2);
+    ctx.fillText(tr('previewEmpty'), w / 2, h / 2);
     return;
   }
 
@@ -832,6 +956,7 @@ async function loadSettings() {
     const text = await call('readFile', { path: settingsPath(), fs: 'sd' });
     const s = JSON.parse(text);
     if (s && typeof s === 'object') {
+      if (s.language === 'fr' || s.language === 'en') settingsCache.language = s.language;
       if (s.surfacing || s.threading || s.last_operation) Object.assign(settingsCache, s);
       else {
         const op = String(s.operation || '1');
@@ -863,7 +988,7 @@ async function loadSettings() {
   showModePanel(op);
   const map = MODE_MAP[op];
   if (map && settingsCache[map.key]) writeModeToForm(op, settingsCache[map.key]);
-  setStatus('Réglages chargés', 'ok');
+  setStatus(tr('settingsLoaded'), 'ok');
 }
 
 (function bindModeSelect() {
@@ -880,7 +1005,7 @@ async function loadSettings() {
     settingsCache.last_operation = newOp;
     await saveSettings();
     prevOp = newOp;
-    setStatus('Mode ' + newOp + ' chargé', 'ok');
+    setStatus(tr('modeLoaded', {mode: newOp}), 'ok');
   });
 })();
 
@@ -1118,8 +1243,8 @@ function genOblong(p) {
 }
 
 function genThreading(p) {
-  if (p.hole_diameter <= p.tool_diameter) throw new Error('Ø trou > Ø outil');
-  if (p.thread_pitch <= 0 || p.thread_number <= 0) throw new Error('Pas et nb filets > 0');
+  if (p.hole_diameter <= p.tool_diameter) throw new Error(tr('holeToolError'));
+  if (p.thread_pitch <= 0 || p.thread_number <= 0) throw new Error(tr('pitchThreadError'));
   const numRadial = Math.ceil(p.total_depth / p.depth_per_pass);
   const holeR = p.hole_diameter / 2, toolR = p.tool_diameter / 2;
   const arcCode = p.path_type === 'left' ? 'G03' : 'G02';
@@ -1203,21 +1328,21 @@ async function generate() {
     document.getElementById('open-btn').disabled = false;
     requestAnimationFrame(() => drawPreview(generatedCode));
     const ok = await saveSettings();
-    setStatus(ok ? 'G-code généré · aperçu OK' : 'G-code généré · settings ÉCHEC', ok ? 'ok' : 'err');
+    setStatus(ok ? tr('gcodeGeneratedPreviewOk') : tr('gcodeGeneratedSettingsError'), ok ? 'ok' : 'err');
   } catch (e) {
     setStatus(e.message || String(e), 'err');
   }
 }
 
 async function openInViewer() {
-  if (!generatedCode) { setStatus('Génère d’abord le G-code', 'err'); return; }
+  if (!generatedCode) { setStatus(tr('generateFirst'), 'err'); return; }
   const p = collectParams();
   const safe = (p.project_name || 'test').replace(/[<>:"/\\|?*]/g, '_');
   const names = { '1': 'surf', '2': 'contour', '3': 'matrix', '4': 'corner', '5': 'oblong', '6': 'thread' };
   const path = `/sd/${names[p.operation] || 'op'}_${safe}.nc`;
   try {
     await saveSettings();
-    setStatus('Enregistrement…', '');
+    setStatus(tr('saving'), '');
     await call('writeFile', { path, content: generatedCode, fs: 'sd' });
     let loaded = false;
     for (const t of [
@@ -1228,10 +1353,10 @@ async function openInViewer() {
     ]) {
       try { await call(t.method, t.params); loaded = true; break; } catch (_) {}
     }
-    setStatus(loaded ? 'Chargé dans le viewer' : 'Sauvé : ' + path + ' — ouvre dans Files', 'ok');
+    setStatus(loaded ? tr('loadedInViewer') : tr('savedOpenFiles', {path}), 'ok');
     setTimeout(() => { try { call('close'); } catch (_) {} }, 400);
   } catch (e) {
-    setStatus('Erreur : ' + (e.message || e), 'err');
+    setStatus(tr('error', {message: (e.message || e)}), 'err');
   }
 }
 
