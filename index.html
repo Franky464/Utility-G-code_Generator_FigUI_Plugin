@@ -146,30 +146,148 @@ select { cursor: pointer; }
   .panel-left { border-right: none; border-bottom: 1px solid var(--border, #222840); }
 }
 </style>
+
+<style id="i18n-style">
+.language-bar {
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  background: rgba(20, 26, 38, .96);
+  border: 1px solid #3b465d;
+  border-radius: 8px;
+  color: #dce3f2;
+  font: 13px system-ui, sans-serif;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+.language-bar select {
+  background: #111722;
+  color: #e8edf7;
+  border: 1px solid #46536d;
+  border-radius: 5px;
+  padding: 3px 6px;
+}
+</style>
+
+
+<script id="i18n-script">
+const I18N = {
+  fr: {
+    language:"Langue", operationMode:"Mode d'opération", project:"Projet (commun)",
+    projectName:"Nom projet", machine:"Machine", units:"Unités", plungePercent:"Plongée (%)",
+    operation:"Opération", surfacing:"Surfaçage", contourDrilling:"Perçages par détourage",
+    matrixDrilling:"Perçages matrice (RAST)", cornerRadius:"Rayon sur 90°", oblongHole:"Trou oblong",
+    threading:"Filetage", clearance:"Dégagement Z", toolAndSpeeds:"Outil & vitesses",
+    toolDiameter:"Ø outil (mm)", spindleSpeed:"Broche RPM", feedRate:"Feed (mm/min)",
+    depthPerPass:"Prof. / passe", totalDepth:"Profondeur totale (mm)",
+    startPosition:"Position départ (par mode)", startX:"Start X", startY:"Start Y", startZ:"Start Z",
+    rastMatrix:"Matrice RAST", columns:"Colonnes", rows:"Lignes", pitchX:"Pas X", pitchY:"Pas Y",
+    peckHeight:"Hauteur débourrage", generateGcode:"Générer G-code", preview:"Aperçu",
+    settingsLoaded:"Réglages chargés", settingsSaved:"Réglages enregistrés",
+    gcodeGeneratedPreviewOk:"G-code généré · aperçu OK",
+    gcodeGeneratedSettingsError:"G-code généré · settings ÉCHEC",
+    generateFirst:"Génère d’abord le G-code", saving:"Enregistrement…",
+    loadedInViewer:"Chargé dans le viewer", previewEmpty:"Génère un G-code pour l’aperçu"
+  },
+  en: {
+    language:"Language", operationMode:"Operation mode", project:"Project (common)",
+    projectName:"Project name", machine:"Machine", units:"Units", plungePercent:"Plunge (%)",
+    operation:"Operation", surfacing:"Surfacing", contourDrilling:"Contour drilling",
+    matrixDrilling:"Matrix drilling (RAST)", cornerRadius:"90° corner radius", oblongHole:"Slot / oblong hole",
+    threading:"Threading", clearance:"Z clearance", toolAndSpeeds:"Tool & speeds",
+    toolDiameter:"Tool diameter (mm)", spindleSpeed:"Spindle RPM", feedRate:"Feed (mm/min)",
+    depthPerPass:"Depth / pass", totalDepth:"Total depth (mm)",
+    startPosition:"Start position (per mode)", startX:"Start X", startY:"Start Y", startZ:"Start Z",
+    rastMatrix:"RAST matrix", columns:"Columns", rows:"Rows", pitchX:"X pitch", pitchY:"Y pitch",
+    peckHeight:"Peck height", generateGcode:"Generate G-code", preview:"Preview",
+    settingsLoaded:"Settings loaded", settingsSaved:"Settings saved",
+    gcodeGeneratedPreviewOk:"G-code generated · preview OK",
+    gcodeGeneratedSettingsError:"G-code generated · settings FAILED",
+    generateFirst:"Generate the G-code first", saving:"Saving…",
+    loadedInViewer:"Loaded in viewer", previewEmpty:"Generate G-code for the preview"
+  }
+};
+
+function uiLang() {
+  return (typeof settingsCache !== "undefined" &&
+          (settingsCache.language === "en" || settingsCache.language === "fr"))
+         ? settingsCache.language : "fr";
+}
+function t(key) {
+  return (I18N[uiLang()] && I18N[uiLang()][key]) || I18N.fr[key] || key;
+}
+function applyLanguage() {
+  const lang = uiLang();
+  document.documentElement.lang = lang;
+  const select = document.getElementById("language-select");
+  if (select) select.value = lang;
+  const label = document.getElementById("language-label");
+  if (label) label.textContent = t("language");
+
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.dataset.i18n;
+    if (I18N[lang][key]) el.textContent = I18N[lang][key];
+  });
+
+  // Restore the operation selector labels from the translation table.
+  document.querySelectorAll("#operation option[data-i18n]").forEach(el => {
+    const key = el.dataset.i18n;
+    if (I18N[lang][key]) el.textContent = I18N[lang][key];
+  });
+}
+
+async function changeLanguage(lang) {
+  if (lang !== "fr" && lang !== "en") lang = "fr";
+  settingsCache.language = lang;
+  applyLanguage();
+  try { await saveSettings(); } catch (_) {}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const select = document.getElementById("language-select");
+  if (select) select.addEventListener("change", e => changeLanguage(e.target.value));
+  applyLanguage();
+});
+</script>
+
 </head>
 <body>
+
+<div id="language-bar" class="language-bar">
+  <span class="language-icon">🌐</span>
+  <label for="language-select" id="language-label">Langue</label>
+  <select id="language-select">
+    <option value="fr">Français</option>
+    <option value="en">English</option>
+  </select>
+</div>
+
 <div class="layout">
   <div class="sidebar">
     <div class="section">
-      <div class="section-title">Mode d'opération</div>
+      <div class="section-title" data-i18n="operationMode">Mode d'opération</div>
       <select id="operation" class="mode-select">
-        <option value="1">1 – Surfaçage</option>
-        <option value="2">2 – Perçages par détourage</option>
-        <option value="3">3 – Perçages matrice (RAST)</option>
-        <option value="4">4 – Rayon sur 90°</option>
-        <option value="5">5 – Trou oblong</option>
-        <option value="6">6 – Filetage</option>
+        <option value="1" data-i18n="surfacing">1 – Surfaçage</option>
+        <option value="2" data-i18n="contourDrilling">2 – Perçages par détourage</option>
+        <option value="3" data-i18n="matrixDrilling">3 – Perçages matrice (RAST)</option>
+        <option value="4" data-i18n="cornerRadius">4 – Rayon sur 90°</option>
+        <option value="5" data-i18n="oblongHole">5 – Trou oblong</option>
+        <option value="6" data-i18n="threading">6 – Filetage</option>
       </select>
     </div>
     <div class="section">
-      <div class="section-title">Projet (commun)</div>
-      <label>Nom projet</label>
+      <div class="section-title" data-i18n="project">Projet (commun)</div>
+      <label data-i18n="projectName">Nom projet</label>
       <input type="text" id="project_name" value="test">
-      <label>Machine</label>
+      <label data-i18n="machine">Machine</label>
       <input type="text" id="machine" value="CNC_450x800">
       <div class="row2">
         <div>
-          <label>Unités</label>
+          <label data-i18n="units">Unités</label>
           <select id="global_units">
             <option value="mm">mm (G21)</option>
             <option value="in">in (G20)</option>
@@ -182,31 +300,31 @@ select { cursor: pointer; }
       </div>
     </div>
     <div class="section">
-      <div class="section-title">Position départ (par mode)</div>
+      <div class="section-title" data-i18n="startPosition">Position départ (par mode)</div>
       <div class="row2">
-        <div><label>Start X</label><input type="number" id="start_x" value="0" step="0.1"></div>
-        <div><label>Start Y</label><input type="number" id="start_y" value="0" step="0.1"></div>
+        <div><label data-i18n="startX">Start X</label><input type="number" id="start_x" value="0" step="0.1"></div>
+        <div><label data-i18n="startY">Start Y</label><input type="number" id="start_y" value="0" step="0.1"></div>
       </div>
       <div class="row2">
-        <div><label>Start Z</label><input type="number" id="start_z" value="0" step="0.1"></div>
-        <div><label>Dégagement Z</label><input type="number" id="clearance_height" value="5" min="0.1" step="0.1"></div>
+        <div><label data-i18n="startZ">Start Z</label><input type="number" id="start_z" value="0" step="0.1"></div>
+        <div><label data-i18n="clearance">Dégagement Z</label><input type="number" id="clearance_height" value="5" min="0.1" step="0.1"></div>
       </div>
     </div>
     <div class="section">
       <div class="section-title">Outil & vitesses (par mode)</div>
       <div class="row2">
-        <div><label>Ø outil (mm)</label><input type="number" id="tool_diameter" value="10" min="0.1" step="0.1"></div>
-        <div><label>Broche RPM</label><input type="number" id="spindle_speed" value="1000" min="0" step="100"></div>
+        <div><label data-i18n="toolDiameter">Ø outil (mm)</label><input type="number" id="tool_diameter" value="10" min="0.1" step="0.1"></div>
+        <div><label data-i18n="spindleSpeed">Broche RPM</label><input type="number" id="spindle_speed" value="1000" min="0" step="100"></div>
       </div>
       <div class="row2">
-        <div><label>Feed (mm/min)</label><input type="number" id="feed_rate" value="1800" min="1" step="50"></div>
-        <div><label>Prof. / passe</label><input type="number" id="depth_per_pass" value="1" min="0.01" step="0.1"></div>
+        <div><label data-i18n="feedRate">Feed (mm/min)</label><input type="number" id="feed_rate" value="1800" min="1" step="50"></div>
+        <div><label data-i18n="depthPerPass">Prof. / passe</label><input type="number" id="depth_per_pass" value="1" min="0.01" step="0.1"></div>
       </div>
-      <label>Profondeur totale (mm)</label>
+      <label data-i18n="totalDepth">Profondeur totale (mm)</label>
       <input type="number" id="total_depth" value="2" min="0.01" step="0.1">
     </div>
     <div class="section mode-panel" id="panel-1">
-      <div class="section-title">Surfaçage</div>
+      <div class="section-title" data-i18n="surfacing">Surfaçage</div>
       <div class="row2">
         <div><label>Largeur X</label><input type="number" id="width_x" value="100" min="0.1" step="0.1"></div>
         <div><label>Longueur Y</label><input type="number" id="length_y" value="100" min="0.1" step="0.1"></div>
@@ -239,16 +357,16 @@ select { cursor: pointer; }
       <input type="number" id="overlap_blind" value="50" min="0" max="99" step="1">
     </div>
     <div class="section mode-panel hidden" id="panel-3">
-      <div class="section-title">Matrice RAST</div>
+      <div class="section-title" data-i18n="rastMatrix">Matrice RAST</div>
       <div class="row2">
-        <div><label>Colonnes</label><input type="number" id="num_cols" value="3" min="1" step="1"></div>
-        <div><label>Lignes</label><input type="number" id="num_rows" value="3" min="1" step="1"></div>
+        <div><label data-i18n="columns">Colonnes</label><input type="number" id="num_cols" value="3" min="1" step="1"></div>
+        <div><label data-i18n="rows">Lignes</label><input type="number" id="num_rows" value="3" min="1" step="1"></div>
       </div>
       <div class="row2">
-        <div><label>Pas X</label><input type="number" id="spacing_x" value="10" min="0" step="0.1"></div>
-        <div><label>Pas Y</label><input type="number" id="spacing_y" value="10" min="0" step="0.1"></div>
+        <div><label data-i18n="pitchX">Pas X</label><input type="number" id="spacing_x" value="10" min="0" step="0.1"></div>
+        <div><label data-i18n="pitchY">Pas Y</label><input type="number" id="spacing_y" value="10" min="0" step="0.1"></div>
       </div>
-      <label>Hauteur débourrage</label>
+      <label data-i18n="peckHeight">Hauteur débourrage</label>
       <input type="number" id="deburr_height" value="2" min="0.1" step="0.1">
     </div>
     <div class="section mode-panel hidden" id="panel-4">
@@ -269,7 +387,7 @@ select { cursor: pointer; }
       </select>
     </div>
     <div class="section mode-panel hidden" id="panel-5">
-      <div class="section-title">Trou oblong</div>
+      <div class="section-title" data-i18n="oblongHole">Trou oblong</div>
       <div class="row2">
         <div><label>Longueur X</label><input type="number" id="ob_length_x" value="20" min="0" step="0.1"></div>
         <div><label>Longueur Y</label><input type="number" id="ob_length_y" value="20" min="0" step="0.1"></div>
@@ -283,7 +401,7 @@ select { cursor: pointer; }
       </select>
     </div>
     <div class="section mode-panel hidden" id="panel-6">
-      <div class="section-title">Filetage</div>
+      <div class="section-title" data-i18n="threading">Filetage</div>
       <label>Ø trou / pièce (mm)</label>
       <input type="number" id="th_hole_diameter" value="30" min="0.1" step="0.1">
       <label>Type</label>
@@ -301,7 +419,7 @@ select { cursor: pointer; }
         <div><label>Nb filets</label><input type="number" id="thread_number" value="6" min="1" step="1"></div>
       </div>
     </div>
-    <button class="generate-btn" onclick="generate()">Générer G-code</button>
+    <button class="generate-btn" onclick="generate()" data-i18n="generateGcode">Générer G-code</button>
   </div>
 
   <div class="main">
@@ -1117,7 +1235,7 @@ async function openInViewer() {
   }
 }
 
-loadSettings();
+loadSettings().finally(() => applyLanguage());
 setTimeout(() => drawPreview(''), 50);
 </script>
 </body>
