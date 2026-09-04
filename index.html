@@ -64,7 +64,7 @@ select { cursor: pointer; }
 .main-split {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 2fr;
   min-height: 0;
   overflow: hidden;
 }
@@ -311,7 +311,7 @@ select { cursor: pointer; }
         <textarea id="gcode-output" readonly spellcheck="false" placeholder="Le G-code apparaîtra ici..."></textarea>
       </div>
       <div class="panel">
-        <div class="panel-header">Aperçu 2D (XY)</div>
+        <div class="panel-header">  2D (XY)</div>
         <div class="viz-wrap">
           <canvas id="preview-canvas"></canvas>
           <div class="viz-legend">
@@ -521,7 +521,7 @@ function drawPreview(gcode) {
     const a = Math.abs(v);
     if (a >= 100) return v.toFixed(1);
     if (a >= 10) return v.toFixed(2);
-    return v.toFixed(3);
+    return v.toFixed(2);
   }
 
   // Axes X=0 / Y=0
@@ -563,7 +563,7 @@ function drawPreview(gcode) {
   if (startSet) {
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
-    ctx.arc(tx(startX), ty(startY), 4, 0, Math.PI * 2);
+    ctx.arc(tx(startX), ty(startY), 12, 0, Math.PI * 2); // diamètre ×3 (rayon 4 → 12)
     ctx.fill();
   }
 
@@ -1096,7 +1096,7 @@ async function openInViewer() {
   const p = collectParams();
   const safe = (p.project_name || 'test').replace(/[<>:"/\\|?*]/g, '_');
   const names = { '1': 'surf', '2': 'contour', '3': 'matrix', '4': 'corner', '5': 'oblong', '6': 'thread' };
-  const path = `/sd/utility_${names[p.operation] || 'op'}_${safe}.nc`;
+  const path = `/sd/${names[p.operation] || 'op'}_${safe}.nc`;
   try {
     await saveSettings();
     setStatus('Enregistrement…', '');
