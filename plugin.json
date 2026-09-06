@@ -5,5 +5,5 @@
   "layout": "full",
   "layoutTablet": "full",
   "entry": "index.html",
-  "files": ["index.html"]
+  "files": ["index.html","tooltips.json","settings.json","icon.png"]
 }
