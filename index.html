@@ -53,13 +53,6 @@ select { cursor: pointer; }
   padding: 8px !important;
 }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.generate-btn {
-  margin: 12px; padding: 11px;
-  background: var(--accent, #f0a030); color: #000;
-  border: none; border-radius: 6px;
-  font-size: 14px; font-weight: 700; cursor: pointer;
-}
-.generate-btn:hover { filter: brightness(1.1); }
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 .main-split {
   flex: 1;
@@ -101,11 +94,35 @@ select { cursor: pointer; }
   position: relative;
   background: #0a0e16;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
-#preview-canvas {
+.viz-pane {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border, #222840);
+}
+.viz-pane:last-child { border-bottom: none; }
+.viz-pane canvas {
+  flex: 1;
   width: 100%;
-  height: 100%;
+  min-height: 0;
   display: block;
+}
+.viz-pane-label {
+  position: absolute;
+  top: 4px; left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--text-muted, #6a7898);
+  background: rgba(12,16,24,.7);
+  padding: 1px 5px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 2;
 }
 .viz-legend {
   position: absolute;
@@ -122,6 +139,7 @@ select { cursor: pointer; }
 .leg-rapid { border-top: 2px dashed #64748b; height: 0; }
 .leg-cut { background: #f0a030; }
 .leg-start { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+.leg-plunge { width: 6px; height: 6px; border-radius: 50%; background: #f0a030; }
 .action-bar {
   padding: 8px 12px;
   background: var(--surface, #151c28);
@@ -155,6 +173,211 @@ select { cursor: pointer; }
    Interface multilingue : Français / English
    Les IDs, valeurs des SELECT et le G-code restent inchangés.
    ============================================================ */
+   /* Tooltips FR/EN — source : tooltips.json */
+const TOOLTIPS = {
+  fr: {
+    common: {
+      project_name: "Nom du projet, utilisé dans l'en-tête du G-code et pour nommer le fichier exporté.",
+      machine: "Identifiant de la machine (informatif), inscrit dans l'en-tête du G-code.",
+      global_units: "Unités de travail : mm (G21) ou pouces (G20). Affecte toutes les cotes saisies.",
+      plunge_percent: "Vitesse de plongée en % de l'avance de coupe (Avance). Réduit la vitesse en Z lors des descentes."
+    },
+    modes: {
+      "1": {
+        start_x: "Coin de départ (X) de la zone à surfacer, avant compensation du rayon outil.",
+        start_y: "Coin de départ (Y) de la zone à surfacer, avant compensation du rayon outil.",
+        start_z: "Altitude Z de la surface à usiner (niveau 0 de la passe de surfaçage).",
+        clearance_height: "Hauteur de dégagement en Z pour les déplacements rapides au-dessus de la pièce.",
+        tool_diameter: "Diamètre de la fraise utilisée. Sert à calculer le pas et le débordement du parcours.",
+        spindle_speed: "Vitesse de rotation broche (tr/min).",
+        feed_rate: "Vitesse d'avance en usinage (mm/min) pour les déplacements de coupe.",
+        depth_per_pass: "Profondeur retirée à chaque passe. Ne doit pas dépasser la profondeur totale.",
+        total_depth: "Profondeur totale à surfacer (cumul de toutes les passes).",
+        width_x: "Largeur (en X) de la zone à surfacer.",
+        length_y: "Longueur (en Y) de la zone à surfacer.",
+        overlap_percent: "Chevauchement entre deux passes adjacentes, en % du diamètre outil.",
+        path_type_surf: "Sens du parcours : Opposition, Avalant, ou Alterné (va-et-vient)."
+      },
+      "2": {
+        start_x: "Centre (X) du trou à réaliser par détourage.",
+        start_y: "Centre (Y) du trou à réaliser par détourage.",
+        start_z: "Altitude Z de la surface de départ, avant plongée.",
+        clearance_height: "Hauteur de dégagement en Z entre les déplacements rapides.",
+        tool_diameter: "Diamètre de la fraise. Doit être inférieur au diamètre du trou.",
+        spindle_speed: "Vitesse de rotation broche (tr/min).",
+        feed_rate: "Vitesse d'avance en usinage (mm/min).",
+        depth_per_pass: "Profondeur retirée à chaque passe de détourage.",
+        total_depth: "Profondeur totale du trou (traversant ou borgne selon le type choisi).",
+        hole_diameter: "Diamètre final du trou à obtenir.",
+        drilling_type: "Traversant (contour simple), Borgne (passes concentriques), ou Diamètre extérieur (détourage externe d'une pièce).",
+        path_type_contour: "Sens du fraisage circulaire : Opposition (G02) ou Avalant (G03).",
+        overlap_blind: "Chevauchement entre cercles concentriques successifs (mode borgne uniquement), en % du Ø outil."
+      },
+      "3": {
+        start_x: "Position X du premier trou de la matrice (coin de référence).",
+        start_y: "Position Y du premier trou de la matrice (coin de référence).",
+        start_z: "Altitude Z de la surface avant perçage.",
+        clearance_height: "Hauteur de dégagement en Z entre chaque trou.",
+        tool_diameter: "Diamètre du foret ou de la fraise de perçage (informatif).",
+        spindle_speed: "Vitesse de rotation broche (tr/min).",
+        feed_rate: "Vitesse d'avance en usinage (mm/min), utilisée pour la descente en Z.",
+        depth_per_pass: "Profondeur de perçage par passe (avec débourrage entre chaque passe).",
+        total_depth: "Profondeur totale de chaque trou de la matrice.",
+        num_cols: "Nombre de colonnes (trous suivant l'axe X).",
+        num_rows: "Nombre de lignes (trous suivant l'axe Y).",
+        spacing_x: "Entraxe entre deux colonnes consécutives (pas en X).",
+        spacing_y: "Entraxe entre deux lignes consécutives (pas en Y).",
+        deburr_height: "Remontée intermédiaire en Z entre les passes de perçage (débourrage des copeaux)."
+      },
+      "4": {
+        start_x: "Position X de l'angle à traiter (coin de la pièce).",
+        start_y: "Position Y de l'angle à traiter (coin de la pièce).",
+        start_z: "Altitude Z de la surface avant plongée.",
+        clearance_height: "Hauteur de dégagement en Z entre les passes.",
+        tool_diameter: "Diamètre de la fraise. Ajouté au rayon programmé pour définir le rayon réel de l'arc.",
+        spindle_speed: "Vitesse de rotation broche (tr/min).",
+        feed_rate: "Vitesse d'avance en usinage (mm/min).",
+        depth_per_pass: "Profondeur retirée à chaque passe.",
+        total_depth: "Profondeur totale de l'usinage du rayon.",
+        radius: "Rayon programmé (rayon de la pièce finie, hors compensation outil).",
+        corner_type: "Coin de la pièce à traiter : Avant/Arrière x Gauche/Droit.",
+        path_type_corner: "Sens du fraisage : Opposition (G02) ou Avalant (G03)."
+      },
+      "5": {
+        start_x: "Centre (X) du trou oblong.",
+        start_y: "Centre (Y) du trou oblong.",
+        start_z: "Altitude Z de la surface avant plongée.",
+        clearance_height: "Hauteur de dégagement en Z.",
+        tool_diameter: "Diamètre de la fraise. Doit être inférieur ou égal à la largeur du trou oblong.",
+        spindle_speed: "Vitesse de rotation broche (tr/min).",
+        feed_rate: "Vitesse d'avance en usinage (mm/min).",
+        depth_per_pass: "Profondeur retirée à chaque passe.",
+        total_depth: "Profondeur totale du trou oblong.",
+        ob_length_x: "Longueur totale du trou oblong suivant l'axe X (entraxe + largeur).",
+        ob_length_y: "Longueur totale du trou oblong suivant l'axe Y (si orientation verticale).",
+        ob_width: "Largeur du trou oblong (doit être ≥ Ø outil).",
+        path_type_oblong: "Sens du parcours : Opposition (G02) ou Avalant (G03)."
+      },
+      "6": {
+        start_x: "Centre (X) de l'alésage ou de la pièce à fileter.",
+        start_y: "Centre (Y) de l'alésage ou de la pièce à fileter.",
+        start_z: "Altitude Z du plan de départ du filetage (face supérieure).",
+        clearance_height: "Hauteur de dégagement en Z avant/après le filetage.",
+        tool_diameter: "Diamètre de la fraise à fileter.",
+        spindle_speed: "Vitesse de rotation broche (tr/min).",
+        feed_rate: "Vitesse d'avance en usinage (mm/min).",
+        depth_per_pass: "Profondeur radiale retirée à chaque passe d'approche.",
+        total_depth: "Profondeur radiale totale du filet (pénétration cumulée).",
+        th_hole_diameter: "Diamètre nominal du trou (écrou) ou de la pièce (vis) à fileter.",
+        thread_type: "Écrou (filetage interne) ou Vis (filetage externe).",
+        path_type_thread: "Sens d'hélice du filet : Droite (G02) ou Gauche (G03).",
+        thread_pitch: "Pas du filet (distance entre deux filets consécutifs, en mm).",
+        thread_number: "Nombre de filets (tours d'hélice) à réaliser."
+      }
+    }
+  },
+  en: {
+    common: {
+      project_name: "Project name, used in the G-code header and as the exported file name.",
+      machine: "Machine identifier (informational), written in the G-code header.",
+      global_units: "Working units: mm (G21) or inches (G20). Affects all entered dimensions.",
+      plunge_percent: "Plunge speed as a % of the feed rate. Slows down Z descents."
+    },
+    modes: {
+      "1": {
+        start_x: "Starting corner (X) of the area to surface, before tool radius compensation.",
+        start_y: "Starting corner (Y) of the area to surface, before tool radius compensation.",
+        start_z: "Z height of the surface to machine (zero level of the surfacing pass).",
+        clearance_height: "Z clearance height for rapid moves above the part.",
+        tool_diameter: "Diameter of the mill used. Used to compute stepover and path overshoot.",
+        spindle_speed: "Spindle rotation speed (RPM).",
+        feed_rate: "Cutting feed rate (mm/min) for machining moves.",
+        depth_per_pass: "Depth removed per pass. Must not exceed the total depth.",
+        total_depth: "Total depth to surface (sum of all passes).",
+        width_x: "Width (X) of the area to surface.",
+        length_y: "Length (Y) of the area to surface.",
+        overlap_percent: "Overlap between adjacent passes, as a % of the tool diameter.",
+        path_type_surf: "Path direction: Conventional, Climb, or Alternating (zig-zag)."
+      },
+      "2": {
+        start_x: "Center (X) of the hole to make by contour drilling.",
+        start_y: "Center (Y) of the hole to make by contour drilling.",
+        start_z: "Z height of the starting surface, before plunging.",
+        clearance_height: "Z clearance height between rapid moves.",
+        tool_diameter: "Mill diameter. Must be smaller than the hole diameter.",
+        spindle_speed: "Spindle rotation speed (RPM).",
+        feed_rate: "Cutting feed rate (mm/min).",
+        depth_per_pass: "Depth removed per contouring pass.",
+        total_depth: "Total hole depth (through or blind, per the selected type).",
+        hole_diameter: "Final diameter of the hole to obtain.",
+        drilling_type: "Through hole (simple contour), Blind hole (concentric passes), or Outer diameter (external contouring of a part).",
+        path_type_contour: "Circular milling direction: Conventional (G02) or Climb (G03).",
+        overlap_blind: "Overlap between successive concentric circles (blind mode only), as a % of tool Ø."
+      },
+      "3": {
+        start_x: "X position of the first hole in the matrix (reference corner).",
+        start_y: "Y position of the first hole in the matrix (reference corner).",
+        start_z: "Z height of the surface before drilling.",
+        clearance_height: "Z clearance height between each hole.",
+        tool_diameter: "Diameter of the drill or mill used (informational).",
+        spindle_speed: "Spindle rotation speed (RPM).",
+        feed_rate: "Cutting feed rate (mm/min), used for the Z descent.",
+        depth_per_pass: "Drilling depth per pass (with a peck/deburr retract between each).",
+        total_depth: "Total depth of each hole in the matrix.",
+        num_cols: "Number of columns (holes along X).",
+        num_rows: "Number of rows (holes along Y).",
+        spacing_x: "Spacing between two consecutive columns (X pitch).",
+        spacing_y: "Spacing between two consecutive rows (Y pitch).",
+        deburr_height: "Intermediate Z retract between drilling passes (chip clearing)."
+      },
+      "4": {
+        start_x: "X position of the corner to machine (part corner).",
+        start_y: "Y position of the corner to machine (part corner).",
+        start_z: "Z height of the surface before plunging.",
+        clearance_height: "Z clearance height between passes.",
+        tool_diameter: "Mill diameter. Added to the programmed radius to get the actual arc radius.",
+        spindle_speed: "Spindle rotation speed (RPM).",
+        feed_rate: "Cutting feed rate (mm/min).",
+        depth_per_pass: "Depth removed per pass.",
+        total_depth: "Total depth of the corner radius machining.",
+        radius: "Programmed radius (finished part radius, excluding tool compensation).",
+        corner_type: "Corner of the part to machine: Front/Rear x Left/Right.",
+        path_type_corner: "Milling direction: Conventional (G02) or Climb (G03)."
+      },
+      "5": {
+        start_x: "Center (X) of the oblong hole.",
+        start_y: "Center (Y) of the oblong hole.",
+        start_z: "Z height of the surface before plunging.",
+        clearance_height: "Z clearance height.",
+        tool_diameter: "Mill diameter. Must be less than or equal to the slot width.",
+        spindle_speed: "Spindle rotation speed (RPM).",
+        feed_rate: "Cutting feed rate (mm/min).",
+        depth_per_pass: "Depth removed per pass.",
+        total_depth: "Total depth of the oblong hole.",
+        ob_length_x: "Total length of the slot along X (center distance + width).",
+        ob_length_y: "Total length of the slot along Y (if vertical orientation).",
+        ob_width: "Width of the slot (must be ≥ tool Ø).",
+        path_type_oblong: "Path direction: Conventional (G02) or Climb (G03)."
+      },
+      "6": {
+        start_x: "Center (X) of the bore or part to be threaded.",
+        start_y: "Center (Y) of the bore or part to be threaded.",
+        start_z: "Z height of the threading start plane (top face).",
+        clearance_height: "Z clearance height before/after threading.",
+        tool_diameter: "Diameter of the thread milling cutter.",
+        spindle_speed: "Spindle rotation speed (RPM).",
+        feed_rate: "Cutting feed rate (mm/min).",
+        depth_per_pass: "Radial depth removed per approach pass.",
+        total_depth: "Total radial thread depth (cumulative penetration).",
+        th_hole_diameter: "Nominal diameter of the hole (nut) or the part (screw) to thread.",
+        thread_type: "Nut (internal thread) or Screw (external thread).",
+        path_type_thread: "Thread helix direction: Right (G02) or Left (G03).",
+        thread_pitch: "Thread pitch (distance between two consecutive threads, in mm).",
+        thread_number: "Number of thread turns (helix revolutions) to make."
+      }
+    }
+  }
+};
 const I18N = {
   fr: {
     language: "Langue",
@@ -209,6 +432,7 @@ const I18N = {
     start: "Départ",
     rapidG0: "Rapide G0",
     cuttingG1G2G3: "Usinage G1/G2/G3",
+    verticalPlunge: "Plongée verticale",
     openViewer: "Ouvrir dans le viewer",
     opSurfacing: "1 – Surfaçage",
     opContour: "2 – Perçages par détourage",
@@ -298,6 +522,7 @@ const I18N = {
     start: "Start",
     rapidG0: "Rapid G0",
     cuttingG1G2G3: "Cutting G1/G2/G3",
+    verticalPlunge: "Vertical plunge",
     openViewer: "Open in viewer",
     opSurfacing: "1 – Surfacing",
     opContour: "2 – Contour drilling",
@@ -354,14 +579,34 @@ function tr(key, vars = {}) {
 function applyLanguage() {
   const lang = getLanguage();
   document.documentElement.lang = lang;
-
   const selector = document.getElementById("language-select");
   if (selector) selector.value = lang;
-
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.dataset.i18n;
     if (I18N[lang]?.[key]) el.textContent = I18N[lang][key];
   });
+  applyTooltips();  // ← ajouter
+}
+
+function applyTooltips() {
+  const lang = getLanguage();
+  const pack = TOOLTIPS[lang] || TOOLTIPS.fr;
+  const op = (document.getElementById('operation')?.value) || '1';
+  const modeTips = pack.modes[op] || {};
+  const commonTips = pack.common || {};
+
+  // Communs (projet)
+  for (const id of Object.keys(commonTips)) {
+    const el = document.getElementById(id);
+    if (el) el.title = commonTips[id];
+  }
+
+  // Champs du mode courant + champs partagés (start, outil…)
+  // Les clés de modes correspondent aux id HTML
+  for (const id of Object.keys(modeTips)) {
+    const el = document.getElementById(id);
+    if (el) el.title = modeTips[id];
+  }
 }
 
 async function changeLanguage(lang) {
@@ -543,7 +788,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <div><label data-i18n="threadCount">Nb filets</label><input type="number" id="thread_number" value="6" min="1" step="1"></div>
       </div>
     </div>
-    <button class="generate-btn" onclick="generate()" data-i18n="generateGcode">Générer G-code</button>
   </div>
 
   <div class="main">
@@ -555,11 +799,19 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="panel">
         <div class="panel-header" data-i18n="preview2d">2D (XY)</div>
         <div class="viz-wrap">
-          <canvas id="preview-canvas"></canvas>
+          <div class="viz-pane" id="viz-pane-xz">
+            <div class="viz-pane-label">XZ</div>
+            <canvas id="preview-canvas-xz"></canvas>
+          </div>
+          <div class="viz-pane" id="viz-pane-xy">
+            <div class="viz-pane-label">XY</div>
+            <canvas id="preview-canvas-xy"></canvas>
+          </div>
           <div class="viz-legend">
             <div><span class="leg-start"></span> <span data-i18n="start">Départ</span></div>
             <div><span class="leg-rapid"></span> <span data-i18n="rapidG0">Rapide G0</span></div>
             <div><span class="leg-cut"></span> <span data-i18n="cuttingG1G2G3">Usinage G1/G2/G3</span></div>
+            <div><span class="leg-plunge"></span> <span data-i18n="verticalPlunge">Plongée verticale</span></div>
           </div>
         </div>
       </div>
@@ -628,8 +880,9 @@ function parseGCodePaths(gcode) {
   let x = 0, y = 0, z = 0;
   let abs = true;
   let startSet = false;
-  let startX = 0, startY = 0;
+  let startX = 0, startY = 0, startZ = 0;
   const lines = String(gcode || '').split(/\r?\n/);
+  const plunges = [];
 
   function toAbs(nx, ny, nz) {
     return {
@@ -639,12 +892,16 @@ function parseGCodePaths(gcode) {
     };
   }
 
-  function addLine(x0, y0, x1, y1, rapid) {
-    if (x0 === x1 && y0 === y1) return;
-    segs.push({ type: rapid ? 'rapid' : 'cut', x0, y0, x1, y1 });
+  function addLine(x0, y0, z0, x1, y1, z1, rapid) {
+    if (x0 === x1 && y0 === y1 && z0 === z1) return;
+    segs.push({ type: rapid ? 'rapid' : 'cut', x0, y0, z0, x1, y1, z1 });
+    // Plongée verticale active : mouvement d'usinage (non rapide) où seul Z varie
+    if (!rapid && x0 === x1 && y0 === y1 && z0 !== z1) {
+      plunges.push({ x: x1, y: y1, z: z1 });
+    }
   }
 
-  function addArc(x0, y0, x1, y1, i, j, cw) {
+  function addArc(x0, y0, z0, x1, y1, z1, i, j, cw) {
     const cx = x0 + (i || 0);
     const cy = y0 + (j || 0);
     let a0 = Math.atan2(y0 - cy, x0 - cx);
@@ -659,13 +916,14 @@ function parseGCodePaths(gcode) {
     }
     const r = Math.hypot(x0 - cx, y0 - cy) || Math.hypot(x1 - cx, y1 - cy);
     const n = Math.max(8, Math.min(72, Math.ceil(Math.abs(da) / (Math.PI / 24))));
-    let px = x0, py = y0;
+    let px = x0, py = y0, pz = z0;
     for (let k = 1; k <= n; k++) {
       const a = a0 + da * (k / n);
       const qx = cx + r * Math.cos(a);
       const qy = cy + r * Math.sin(a);
-      segs.push({ type: 'cut', x0: px, y0: py, x1: qx, y1: qy });
-      px = qx; py = qy;
+      const qz = z0 + (z1 - z0) * (k / n);
+      segs.push({ type: 'cut', x0: px, y0: py, z0: pz, x1: qx, y1: qy, z1: qz });
+      px = qx; py = qy; pz = qz;
     }
   }
 
@@ -687,36 +945,41 @@ function parseGCodePaths(gcode) {
     const p = toAbs(nx, ny, nz);
 
     if (!startSet && (nx != null || ny != null)) {
-      startX = p.x; startY = p.y; startSet = true;
+      startX = p.x; startY = p.y; startZ = p.z; startSet = true;
     }
 
     if (g === 0 || g === 00) {
-      addLine(x, y, p.x, p.y, true);
+      addLine(x, y, z, p.x, p.y, p.z, true);
       x = p.x; y = p.y; z = p.z;
     } else if (g === 1) {
-      addLine(x, y, p.x, p.y, false);
+      addLine(x, y, z, p.x, p.y, p.z, false);
       x = p.x; y = p.y; z = p.z;
     } else if (g === 2 || g === 3) {
-      addArc(x, y, p.x, p.y, ni || 0, nj || 0, g === 2);
+      addArc(x, y, z, p.x, p.y, p.z, ni || 0, nj || 0, g === 2);
       x = p.x; y = p.y; z = p.z;
     } else if (nx != null || ny != null || nz != null) {
       // continuation without explicit G → treat as last motion type is hard; skip pure Z
       if (nx != null || ny != null) {
-        addLine(x, y, p.x, p.y, false);
+        addLine(x, y, z, p.x, p.y, p.z, false);
         x = p.x; y = p.y;
       }
       z = p.z;
     }
   }
-  return { segs, startX, startY, startSet };
+  return { segs, startX, startY, startZ, startSet, plunges };
 }
 
-function drawPreview(gcode) {
-  const canvas = document.getElementById('preview-canvas');
-  const wrap = canvas.parentElement;
+function fmtL(v) {
+  const a = Math.abs(v);
+  if (a >= 100) return v.toFixed(1);
+  return v.toFixed(2);
+}
+
+/* Dessine une vue générique (2 axes quelconques) dans un canvas donné,
+   avec une échelle et des bornes imposées de l’extérieur (pour que XZ et XY
+   partagent la même échelle mm/px). */
+function drawView(canvas, segs, startA, startB, startSet, axisAKey, axisBKey, axisALabel, axisBLabel, w, h, pad, scale, minA, maxA, minB, maxB, toolDiameter, plungePoints) {
   const dpr = window.devicePixelRatio || 1;
-  const w = Math.max(50, wrap.clientWidth);
-  const h = Math.max(50, wrap.clientHeight);
   canvas.width = Math.floor(w * dpr);
   canvas.height = Math.floor(h * dpr);
   const ctx = canvas.getContext('2d');
@@ -725,69 +988,47 @@ function drawPreview(gcode) {
   ctx.fillStyle = '#0a0e16';
   ctx.fillRect(0, 0, w, h);
 
-  const { segs, startX, startY, startSet } = parseGCodePaths(gcode);
   if (!segs.length) {
     ctx.fillStyle = '#6a7898';
-    ctx.font = '13px system-ui';
+    ctx.font = '12px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText(tr('previewEmpty'), w / 2, h / 2);
     return;
   }
 
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const s of segs) {
-    minX = Math.min(minX, s.x0, s.x1);
-    maxX = Math.max(maxX, s.x0, s.x1);
-    minY = Math.min(minY, s.y0, s.y1);
-    maxY = Math.max(maxY, s.y0, s.y1);
-  }
-  if (startSet) {
-    minX = Math.min(minX, startX); maxX = Math.max(maxX, startX);
-    minY = Math.min(minY, startY); maxY = Math.max(maxY, startY);
-  }
-  // Inclure (0,0) dans le cadrage pour toujours voir l’origine
-  minX = Math.min(minX, 0); maxX = Math.max(maxX, 0);
-  minY = Math.min(minY, 0); maxY = Math.max(maxY, 0);
+  const dA = Math.max(1e-6, maxA - minA);
+  const dB = Math.max(1e-6, maxB - minB);
+  const oA = (w - dA * scale) / 2 - minA * scale;
+  const oB = (h + dB * scale) / 2 + minB * scale;
 
-  const pad = 28;
-  const dx = Math.max(1e-6, maxX - minX);
-  const dy = Math.max(1e-6, maxY - minY);
-  const scale = Math.min((w - 2 * pad) / dx, (h - 2 * pad) / dy);
-  const ox = (w - dx * scale) / 2 - minX * scale;
-  const oy = (h + dy * scale) / 2 + minY * scale;
+  function tA(a) { return oA + a * scale; }
+  function tB(b) { return oB - b * scale; }
 
-  function tx(x) { return ox + x * scale; }
-  function ty(y) { return oy - y * scale; }
-
-  function fmtL(v) {
-    const a = Math.abs(v);
-    if (a >= 100) return v.toFixed(1);
-    if (a >= 10) return v.toFixed(2);
-    return v.toFixed(2);
-  }
-
-  // Axes X=0 / Y=0
+  // Axes A=0 / B=0
   ctx.strokeStyle = '#334155';
   ctx.lineWidth = 1;
   ctx.setLineDash([3, 3]);
   ctx.beginPath();
-  ctx.moveTo(tx(minX), ty(0));
-  ctx.lineTo(tx(maxX), ty(0));
-  ctx.moveTo(tx(0), ty(minY));
-  ctx.lineTo(tx(0), ty(maxY));
+  ctx.moveTo(tA(minA), tB(0));
+  ctx.lineTo(tA(maxA), tB(0));
+  ctx.moveTo(tA(0), tB(minB));
+  ctx.lineTo(tA(0), tB(maxB));
   ctx.stroke();
   ctx.setLineDash([]);
 
   // Cadre bounds
   ctx.strokeStyle = '#1e293b';
   ctx.lineWidth = 1;
-  ctx.strokeRect(tx(minX), ty(maxY), (maxX - minX) * scale, (maxY - minY) * scale);
+  ctx.strokeRect(tA(minA), tB(maxB), (maxA - minA) * scale, (maxB - minB) * scale);
 
   // Segments parcours
   for (const s of segs) {
+    const a0 = s[axisAKey + '0'], a1 = s[axisAKey + '1'];
+    const b0 = s[axisBKey + '0'], b1 = s[axisBKey + '1'];
+    if (a0 === a1 && b0 === b1) continue;
     ctx.beginPath();
-    ctx.moveTo(tx(s.x0), ty(s.y0));
-    ctx.lineTo(tx(s.x1), ty(s.y1));
+    ctx.moveTo(tA(a0), tB(b0));
+    ctx.lineTo(tA(a1), tB(b1));
     if (s.type === 'rapid') {
       ctx.strokeStyle = '#64748b';
       ctx.setLineDash([4, 4]);
@@ -801,54 +1042,169 @@ function drawPreview(gcode) {
   }
   ctx.setLineDash([]);
 
-  // Point départ
+  // Plongées verticales actives (G01 Z seul) : petits points oranges
+  if (plungePoints && plungePoints.length) {
+    ctx.fillStyle = '#f0a030';
+    for (const pt of plungePoints) {
+      ctx.beginPath();
+      ctx.arc(tA(pt[axisAKey]), tB(pt[axisBKey]), 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Point départ = empreinte réelle de l'outil (Ø fraise à l'échelle)
+  // Point départ = empreinte outil
+  // XY → cercle (section outil) ; XZ → rectangle (vue de côté, largeur = Ø)
   if (startSet) {
-    ctx.fillStyle = '#22c55e';
-    ctx.beginPath();
-    ctx.arc(tx(startX), ty(startY), 12, 0, Math.PI * 2); // diamètre ×3 (rayon 4 → 12)
-    ctx.fill();
+    const toolRadiusPx = Math.max(2, ((toolDiameter || 0) / 2) * scale);
+    const cx = tA(startA);
+    const cy = tB(startB);
+    const isXZ = (axisAKey === 'x' && axisBKey === 'z');
+
+    if (isXZ) {
+      // Rectangle centré : largeur = Ø outil, hauteur = 3 * h outil (échelle identique)
+      const w = toolRadiusPx * 2;
+      const h = toolRadiusPx * 6;
+      ctx.beginPath();
+      ctx.rect(cx - w / 2, cy - h / 2, w, h);
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.15)';
+      ctx.fill();
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.stroke();
+      // Centre
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#22c55e';
+      ctx.fill();
+    } else {
+      // Cercle (vue XY)
+      ctx.beginPath();
+      ctx.arc(cx, cy, toolRadiusPx, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.15)';
+      ctx.fill();
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#22c55e';
+      ctx.fill();
+    }
   }
 
   // Point origine (0,0)
   ctx.fillStyle = '#38bdf8';
   ctx.beginPath();
-  ctx.arc(tx(0), ty(0), 4, 0, Math.PI * 2);
+  ctx.arc(tA(0), tB(0), 3.5, 0, Math.PI * 2);
   ctx.fill();
 
   // Labels
-  ctx.font = '11px ui-monospace, monospace';
+  ctx.font = '10px ui-monospace, monospace';
   ctx.textBaseline = 'middle';
 
-  function labelAt(x, y, text, anchor) {
-    // anchor: 'left' | 'right' | 'top' | 'bottom' | 'center'
-    const px = tx(x);
-    const py = ty(y);
+  function labelAt(a, b, text, anchor) {
+    const px = tA(a), py = tB(b);
     let ax = 0, ay = 0;
-    if (anchor === 'left') { ctx.textAlign = 'left'; ax = 6; }
-    else if (anchor === 'right') { ctx.textAlign = 'right'; ax = -6; }
+    if (anchor === 'left') { ctx.textAlign = 'left'; ax = 5; }
+    else if (anchor === 'right') { ctx.textAlign = 'right'; ax = -5; }
     else { ctx.textAlign = 'center'; }
-    if (anchor === 'top') ay = -10;
-    else if (anchor === 'bottom') ay = 12;
+    if (anchor === 'top') ay = -9;
+    else if (anchor === 'bottom') ay = 11;
     else if (anchor === 'left' || anchor === 'right') ay = 0;
-    else ay = -12;
+    else ay = -11;
 
     const tw = ctx.measureText(text).width;
     const bx = px + ax - (ctx.textAlign === 'center' ? tw / 2 : ctx.textAlign === 'right' ? tw : 0);
-    const by = py + ay - 7;
+    const by = py + ay - 6;
     ctx.fillStyle = 'rgba(10,14,22,0.75)';
-    ctx.fillRect(bx - 3, by, tw + 6, 14);
+    ctx.fillRect(bx - 3, by, tw + 6, 12);
     ctx.fillStyle = '#cbd5e1';
     ctx.fillText(text, px + ax, py + ay);
   }
 
-  // Origine
-  labelAt(0, 0, 'X0,Y0', 'bottom');
+  labelAt(0, 0, axisALabel + '0,' + axisBLabel + '0', 'bottom');
+  labelAt(minA, (minB + maxB) / 2, axisALabel + 'min ' + fmtL(minA), 'right');
+  labelAt(maxA, (minB + maxB) / 2, axisALabel + 'max ' + fmtL(maxA), 'left');
+  labelAt((minA + maxA) / 2, minB, axisBLabel + 'min ' + fmtL(minB), 'top');
+  labelAt((minA + maxA) / 2, maxB, axisBLabel + 'max ' + fmtL(maxB), 'bottom');
+}
 
-  // Extents
-  labelAt(minX, (minY + maxY) / 2, 'Xmin ' + fmtL(minX), 'right');
-  labelAt(maxX, (minY + maxY) / 2, 'Xmax ' + fmtL(maxX), 'left');
-  labelAt((minX + maxX) / 2, minY, 'Ymin ' + fmtL(minY), 'top');
-  labelAt((minX + maxX) / 2, maxY, 'Ymax ' + fmtL(maxY), 'bottom');
+/* Optimise la hauteur relative du plan XZ (haut) par rapport au plan XY (bas),
+   selon le rapport profondeur (Z) / longueur (Y) réel de la pièce, borné pour
+   que les deux vues restent lisibles. */
+function computeTopPaneFraction(segs) {
+  if (!segs.length) return 0.25;
+  let minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const s of segs) {
+    minY = Math.min(minY, s.y0, s.y1); maxY = Math.max(maxY, s.y0, s.y1);
+    minZ = Math.min(minZ, s.z0, s.z1); maxZ = Math.max(maxZ, s.z0, s.z1);
+  }
+  minY = Math.min(minY, 0); maxY = Math.max(maxY, 0);
+  minZ = Math.min(minZ, 0); maxZ = Math.max(maxZ, 0);
+  const ySpan = Math.max(1e-6, maxY - minY);
+  const zSpan = Math.max(1e-6, maxZ - minZ);
+  let frac = zSpan / (zSpan + ySpan);
+  return Math.min(0.45, Math.max(0.18, frac));
+}
+
+let lastToolDiameter = 10;
+
+function drawPreview(gcode, toolDiameter) {
+  if (toolDiameter != null) lastToolDiameter = toolDiameter;
+  const td = lastToolDiameter;
+  const { segs, startX, startY, startZ, startSet, plunges } = parseGCodePaths(gcode);
+
+  const paneXZ = document.getElementById('viz-pane-xz');
+  const paneXY = document.getElementById('viz-pane-xy');
+  const frac = computeTopPaneFraction(segs);
+  paneXZ.style.flex = frac + ' 1 0%';
+  paneXY.style.flex = (1 - frac) + ' 1 0%';
+
+  const canvasXZ = document.getElementById('preview-canvas-xz');
+  const canvasXY = document.getElementById('preview-canvas-xy');
+  const wXZ = Math.max(30, canvasXZ.parentElement.clientWidth);
+  const hXZ = Math.max(30, canvasXZ.parentElement.clientHeight);
+  const wXY = Math.max(30, canvasXY.parentElement.clientWidth);
+  const hXY = Math.max(30, canvasXY.parentElement.clientHeight);
+  const pad = 24;
+
+  if (!segs.length) {
+    drawView(canvasXZ, segs, 0, 0, false, 'x', 'z', 'X', 'Z', wXZ, hXZ, pad, 1, 0, 1, 0, 1, td);
+    drawView(canvasXY, segs, 0, 0, false, 'x', 'y', 'X', 'Y', wXY, hXY, pad, 1, 0, 1, 0, 1, td);
+    return;
+  }
+
+  // Bornes communes sur X, et propres à Y (vue XY) et Z (vue XZ)
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const s of segs) {
+    minX = Math.min(minX, s.x0, s.x1); maxX = Math.max(maxX, s.x0, s.x1);
+    minY = Math.min(minY, s.y0, s.y1); maxY = Math.max(maxY, s.y0, s.y1);
+    minZ = Math.min(minZ, s.z0, s.z1); maxZ = Math.max(maxZ, s.z0, s.z1);
+  }
+  if (startSet) {
+    minX = Math.min(minX, startX); maxX = Math.max(maxX, startX);
+    minY = Math.min(minY, startY); maxY = Math.max(maxY, startY);
+    minZ = Math.min(minZ, startZ); maxZ = Math.max(maxZ, startZ);
+  }
+  minX = Math.min(minX, 0); maxX = Math.max(maxX, 0);
+  minY = Math.min(minY, 0); maxY = Math.max(maxY, 0);
+  minZ = Math.min(minZ, 0); maxZ = Math.max(maxZ, 0);
+
+  const dX = Math.max(1e-6, maxX - minX);
+  const dY = Math.max(1e-6, maxY - minY);
+  const dZ = Math.max(1e-6, maxZ - minZ);
+
+  // Échelle unique (mm/px) satisfaisant les deux vues, sur les deux panneaux
+  const scale = Math.min(
+    (wXZ - 2 * pad) / dX, (hXZ - 2 * pad) / dZ,
+    (wXY - 2 * pad) / dX, (hXY - 2 * pad) / dY
+  );
+
+  drawView(canvasXZ, segs, startX, startZ, startSet, 'x', 'z', 'X', 'Z', wXZ, hXZ, pad, scale, minX, maxX, minZ, maxZ, td);
+  drawView(canvasXY, segs, startX, startY, startSet, 'x', 'y', 'X', 'Y', wXY, hXY, pad, scale, minX, maxX, minY, maxY, td, plunges);
 }
 
 window.addEventListener('resize', () => {
@@ -856,10 +1212,6 @@ window.addEventListener('resize', () => {
 });
 
 /* ========== Settings PAR MODE (identique version validée) ========== */
-function settingsPath() {
-  return '/sd/plugins/Utility-G-code_Generator/settings.json';
-}
-
 const MODE_MAP = {
   '1': { key: 'surfacing', fields: {
     start_x:'start_x', start_y:'start_y', start_z:'start_z', clearance_height:'clearance_height',
@@ -944,7 +1296,7 @@ function captureMode(op) {
 async function saveSettings() {
   captureMode(str('operation') || '1');
   try {
-    await call('writeFile', { path: settingsPath(), content: JSON.stringify(settingsCache, null, 4), fs: 'sd' });
+    await call('saveSettings', { data: settingsCache });
     return true;
   } catch (e) {
     setStatus('Settings: ' + (e.message || e), 'err');
@@ -953,8 +1305,7 @@ async function saveSettings() {
 }
 async function loadSettings() {
   try {
-    const text = await call('readFile', { path: settingsPath(), fs: 'sd' });
-    const s = JSON.parse(text);
+    const s = await call('getSettings'); // objet déjà parsé, {} si rien n'a encore été sauvé
     if (s && typeof s === 'object') {
       if (s.language === 'fr' || s.language === 'en') settingsCache.language = s.language;
       if (s.surfacing || s.threading || s.last_operation) Object.assign(settingsCache, s);
@@ -996,16 +1347,39 @@ async function loadSettings() {
   let prevOp = sel.value;
   sel.addEventListener('mousedown', () => { prevOp = sel.value; });
   sel.addEventListener('focus', () => { prevOp = sel.value; });
-  sel.addEventListener('change', async () => {
+  sel.addEventListener('change', () => {
     captureMode(prevOp);
     const newOp = sel.value;
     showModePanel(newOp);
     const map = MODE_MAP[newOp];
-    if (map && settingsCache[map.key] && Object.keys(settingsCache[map.key]).length) writeModeToForm(newOp, settingsCache[map.key]);
+    if (map && settingsCache[map.key] && Object.keys(settingsCache[map.key]).length)
+      writeModeToForm(newOp, settingsCache[map.key]);
     settingsCache.last_operation = newOp;
-    await saveSettings();
     prevOp = newOp;
-    setStatus(tr('modeLoaded', {mode: newOp}), 'ok');
+    applyTooltips();  // ← ajouter
+    generate();
+  });
+})();
+
+/* ========== Génération automatique ========== */
+(function bindAutoGenerate() {
+  const sidebar = document.querySelector('.sidebar');
+  let debounceTimer = null;
+  function trigger(delay) {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => { generate(); }, delay);
+  }
+  // Champs texte/nombre : anti-rebond pendant la frappe
+  sidebar.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.id === 'language-select' || el.id === 'operation') return;
+    if (el.tagName === 'INPUT') trigger(400);
+  });
+  // Listes déroulantes : déclenchement immédiat (déjà un choix discret)
+  sidebar.addEventListener('change', (e) => {
+    const el = e.target;
+    if (el.id === 'language-select' || el.id === 'operation') return;
+    if (el.tagName === 'SELECT') trigger(0);
   });
 })();
 
@@ -1155,7 +1529,7 @@ function genCorner(p) {
   const numPassesZ = Math.ceil(p.total_depth / p.depth_per_pass);
   const arcR = p.radius + p.tool_diameter / 2;
   const plunge = p.feed_rate * p.plunge_percent / 100;
-  const conv = p.path_type === 'conventional';
+  const conv = p.path_type !== 'conventional';
   let arcCmd, returnX, returnY;
   if (p.corner_type === 'front_left') {
     if (conv) { arcCmd = `G03 X${fmt(arcR)} Y-${fmt(arcR)} I${fmt(arcR)} J0.000 F${Math.round(p.feed_rate)}`; returnX = `G00 X-${fmt(arcR)}`; returnY = `G00 Y${fmt(arcR)}`; }
@@ -1326,7 +1700,7 @@ async function generate() {
     generatedCode = generateHeader(p, result.stockX, result.stockY, result.stockZ) + '\n' + result.body + '\n' + footer(p.clearance_height);
     document.getElementById('gcode-output').value = generatedCode;
     document.getElementById('open-btn').disabled = false;
-    requestAnimationFrame(() => drawPreview(generatedCode));
+    requestAnimationFrame(() => drawPreview(generatedCode, p.tool_diameter));
     const ok = await saveSettings();
     setStatus(ok ? tr('gcodeGeneratedPreviewOk') : tr('gcodeGeneratedSettingsError'), ok ? 'ok' : 'err');
   } catch (e) {
@@ -1360,8 +1734,8 @@ async function openInViewer() {
   }
 }
 
-loadSettings().finally(() => applyLanguage());
-setTimeout(() => drawPreview(''), 50);
+// Chargement des réglages, application de la langue, puis génération automatique initiale
+loadSettings().finally(() => { applyLanguage(); generate(); });
 </script>
 </body>
 </html>
