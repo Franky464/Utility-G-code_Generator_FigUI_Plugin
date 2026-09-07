@@ -1,1 +1,3 @@
 This plugin design for FigUI is a general purpose toolbox that generate simple Gcode such as drilling, matrix drilling, surfacing, threading, corners, slots-oblong ...
+got to:
+https://github.com/Franky464/Plugin_Utility-G-code_Generator/tree/main/plugins/Utility-G-code_Generator
